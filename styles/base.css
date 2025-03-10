@@ -44,3 +44,12 @@ tr:hover {
 td {
     transition: background-color 0.3s;
 }
+
+.totalsRow {
+    background-color: rgba(171, 64, 96, 0.8);
+    cursor: pointer;
+}
+
+.totalsRow:hover {
+    background-color: rgba(171, 64, 96, 0.6);
+}
