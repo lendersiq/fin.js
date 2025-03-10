@@ -5,6 +5,29 @@
     return;
   }
 
+  const loadScript = (src, callback) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.defer = true;
+    script.onload = callback; // Trigger callback when the script is loaded
+    document.head.appendChild(script);
+  };
+
+  const asciiFIjs = `
+  FFFFFFF  IIIIIII         j    ssss
+  F           I            j   s    
+  FFFFFF      I            j    sss 
+  F           I     ..  j  j       s
+  F        IIIIIII  ..   jjj   ssss
+  `;
+
+  console.log(asciiFIjs);
+
+  // Load scripts in the correct order
+  loadScript("../../libraries/financial.js", () => {
+    console.log("libraries/financial.js loaded");
+  });
+
   // 2) Identify the unique column config (exactly one assumed)
   const uniqueConfig = appConfig.find(
     cfg => cfg.column_type === "data" && cfg.data_type === "unique"
@@ -33,6 +56,7 @@
 
   // 5) Build a very basic modal
   const modalBackdrop = document.createElement("div");
+  modalBackdrop.id = "modalBackdrop";
   Object.assign(modalBackdrop.style, {
     position: "fixed",
     top: "0",
@@ -60,7 +84,7 @@
   title.textContent = "Upload CSV Files";
   modal.appendChild(title);
 
-  // 6) For each source, create a file input
+  // For each source, create a file input
   uniqueSources.forEach(sourceName => {
     const label = document.createElement("label");
     label.textContent = `Select CSV for: ${sourceName}`;
@@ -109,7 +133,14 @@
         // 6.5) Increment loadedCount. If all done, combine data
         loadedCount++;
         if (loadedCount === uniqueSources.length) {
+          const modalBackdrop = document.getElementById("modalBackdrop");
+          document.body.removeChild(modalBackdrop);
+          // Once all CSVs are loaded, combine
           combineData();
+          // Then apply functions and formulas
+          applyFunctionsAndFormulas();
+          // Finally build the table
+          buildTable();
         }
       };
       reader.readAsText(file);
@@ -133,7 +164,7 @@
   modalBackdrop.appendChild(modal);
   document.body.appendChild(modalBackdrop);
 
-  // 7) CSV parser
+  // --- CSV parser ---
   function parseCSV(csvString) {
     const lines = csvString
       .split("\n")
@@ -155,7 +186,7 @@
     });
   }
 
-  // Example formatValue function
+  // Example formatValue function for display
   const currencyFormatter = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -172,43 +203,26 @@
     if (value == null || value === "") {
       return "";
     }
-
     switch (dataType) {
-      case "currency":
-        {
-          const parsedCurrency = parseFloat(value);
-          return isNaN(parsedCurrency)
-            ? value
-            : currencyFormatter.format(parsedCurrency);
-        }
-      case "integer":
-        {
-          const parsedInt = parseInt(value, 10);
-          return isNaN(parsedInt) ? value : integerFormatter.format(parsedInt);
-        }
+      case "currency": {
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? value : currencyFormatter.format(parsed);
+      }
+      case "integer": {
+        const parsed = parseInt(value, 10);
+        return isNaN(parsed) ? value : integerFormatter.format(parsed);
+      }
       case "float":
-        {
-          const parsedFloat = parseFloat(value);
-          return isNaN(parsedFloat) ? value : floatFormatter.format(parsedFloat);
-        }
-      // Add your date formatting if needed:
-      // case 'date':
-      //   ...
-
+      case "rate": {
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? value : floatFormatter.format(parsed);
+      }
       default:
-        // 'unique', string, or fallback
         return value;
     }
   }
 
-  // 8) Combine data across sources into window.combinedData
-  //    Instead of storing a single object, we store:
-  //    {
-  //       [uniqueVal]: {
-  //         subRows: [...],
-  //         totals: {... aggregated fields ...}
-  //       }
-  //    }
+  // --- Combine data across sources into window.combinedData ---
   function combineData() {
     // Start fresh
     window.combinedData = {};
@@ -224,57 +238,53 @@
           // subRows = array of all raw entries for that uniqueValue
           window.combinedData[uniqueValue] = {
             subRows: [],
-            totals: {}, // will compute later
+            totals: {},
           };
         }
         window.combinedData[uniqueValue].subRows.push(row);
       });
     });
 
-    // Compute aggregates (totals) for each uniqueValue
+    // Simple aggregator to get initial "totals" for each uniqueVal
+    // We'll re-run aggregator after we apply functions/formulas too.
     Object.keys(window.combinedData).forEach(uniqueVal => {
       const entry = window.combinedData[uniqueVal];
       const subRows = entry.subRows;
 
-      // If there's only 1 sub-row, just copy it directly to totals
       if (subRows.length === 1) {
         entry.totals = { ...subRows[0] };
       } else {
-        // We have multiple sub-rows, so compute aggregated fields 
-        // according to each column's data_type.
         entry.totals = computeAggregates(subRows);
       }
     });
 
-    // 8.1) Apply filters if needed (on the aggregated data, if that’s your intention)
+    // Apply filters from appConfig (on totals if desired)
     applyFilters();
 
-    console.log("Combined (with subRows) data:", window.combinedData);
-
-    // Build the final table
-    buildTable();
+    console.log("Combined data (with subRows):", window.combinedData);
   }
 
   /**
-   * Compute aggregated values across multiple subRows.
-   * - currency/float => sum
-   * - integer => mode (most frequently occurring)
-   * - date => earliest date
-   * - string => comma-delimited list of distinct values
-   * - unique => pick the first (or any) row’s unique for clarity
+   * Aggregation logic for columns with column_type in ["data","function","formula"].
+   * We rely on `data_type` (e.g. "currency", "integer", "float", "rate", etc.) 
+   * to decide how to aggregate.
    */
-  function computeAggregates(subRows) {
-    // Start an empty aggregator
+  function computeAggregates(rows) {
     const totals = {};
 
-    // For each column in appConfig, gather all values from subRows
-    appConfig.forEach(cfg => {
-      if (cfg.column_type !== "data") return; // skip non-data
-      const colId = cfg.id;
-      const colType = cfg.data_type;
+    // Gather *all* columns that we want to aggregate 
+    // (data, function, formula). We skip "unique" only if we want 1 value
+    // or handle it separately in the logic below.
+    const aggregatableCols = appConfig.filter(cfg =>
+      ["data", "function", "formula"].includes(cfg.column_type)
+    );
 
-      // Gather all non-empty values from subRows
-      const values = subRows
+    aggregatableCols.forEach(cfg => {
+      const colId = cfg.id;
+      const colType = cfg.data_type; 
+
+      // Gather all values from these rows
+      const values = rows
         .map(r => (r[colId] !== undefined ? r[colId] : ""))
         .filter(v => v !== "");
 
@@ -285,33 +295,32 @@
 
       switch (colType) {
         case "unique":
-          // Just set the unique column to the first row’s value
-          // (they should all be the same for a given uniqueVal)
+          // They should all be the same for this unique ID, but let's just pick first
           totals[colId] = values[0];
           break;
 
         case "currency":
         case "float":
-          // Sum them up
-          const floatSum = values.reduce((acc, val) => {
+        case "rate": {
+          // sum them
+          let sum = 0;
+          values.forEach(val => {
             const parsed = parseFloat(val);
-            return isNaN(parsed) ? acc : acc + parsed;
-          }, 0);
-          totals[colId] = floatSum.toString();
+            if (!isNaN(parsed)) sum += parsed;
+          });
+          totals[colId] = sum.toString();
           break;
+        }
 
-        case "integer":
-          // Find the mode
+        case "integer": {
+          // find mode
           const freq = {};
           values.forEach(v => {
-            // parse integer
             const parsed = parseInt(v, 10);
-            // If not numeric, skip
             if (!isNaN(parsed)) {
               freq[parsed] = (freq[parsed] || 0) + 1;
             }
           });
-          // Identify the integer with the highest frequency
           let maxCount = -Infinity;
           let modeValue = "";
           Object.keys(freq).forEach(k => {
@@ -322,24 +331,10 @@
           });
           totals[colId] = modeValue;
           break;
-
-        case "date":
-          // Earliest date
-          // parse them as date objects; find the min
-          // (If you want more robust date parsing, adjust accordingly)
-          const dates = values
-            .map(v => new Date(v)) // might need to parse with moment or custom
-            .filter(d => !isNaN(d.valueOf())); 
-          if (dates.length === 0) {
-            totals[colId] = "";
-          } else {
-            const earliest = new Date(Math.min(...dates));
-            totals[colId] = earliest.toISOString().split("T")[0];
-          }
-          break;
+        }
 
         default:
-          // If string or anything else, we store distinct values as a list
+          // string => distinct
           const distinct = [...new Set(values)];
           totals[colId] = distinct.join(", ");
           break;
@@ -349,64 +344,49 @@
     return totals;
   }
 
-  // 9) Apply filters from appConfig to combinedData
+  // --- Apply any filters defined in appConfig ---
   function applyFilters() {
-    // 9.1) Collect all configs with a filter
     const filterConfigs = appConfig.filter(
       c => c.filter && c.column_type === "data"
     );
-    if (filterConfigs.length === 0) return; // No filters, do nothing
+    if (!filterConfigs.length) return;
 
-    // 9.2) Build an array of { column, fn } so we can quickly evaluate each row
     const parsedFilters = filterConfigs.map(cfg => {
       return {
         column: cfg.id,
-        apply: createFilterFn(cfg.filter, cfg.data_type),
+        fn: createFilterFn(cfg.filter, cfg.data_type)
       };
     });
 
-    // 9.3) For each uniqueVal in combinedData, check if it passes all filters
     Object.keys(window.combinedData).forEach(uniqueVal => {
-      const totalsRow = window.combinedData[uniqueVal].totals;
+      const { totals } = window.combinedData[uniqueVal];
       let keep = true;
-
       for (const filterObj of parsedFilters) {
         const col = filterObj.column;
-        const val = totalsRow[col];
-        if (!filterObj.apply(val)) {
-          // If any filter fails, remove this entry and break
+        const val = totals[col];
+        if (!filterObj.fn(val)) {
           keep = false;
           break;
         }
       }
-
       if (!keep) {
         delete window.combinedData[uniqueVal];
       }
     });
   }
 
-  // 10) Create a function that returns a boolean test
-  //     based on a filter string. 
-  //     Examples:
-  //      - "[20]" => pass if value === 20
-  //      - "[10,20]" => pass if value is 10 or 20
-  //      - "==20" => pass if value == 20
-  //      - ">100" => pass if value > 100
-  //     Etc.
   function createFilterFn(filter, dataType) {
     filter = filter.trim();
 
-    // Helper: convert string to typed value
     function convert(val) {
-      if (dataType === "integer" || dataType === "float" || dataType === "currency") {
+      if (["integer","float","currency","rate"].includes(dataType)) {
         const parsed = parseFloat(val);
         return isNaN(parsed) ? val : parsed;
       }
       return val;
     }
 
-    // 10.1) Array syntax [10,20]
+    // Array syntax: [20,30]
     if (/^\[.*\]$/.test(filter)) {
       let arr;
       try {
@@ -415,41 +395,116 @@
         console.error("Failed to parse array filter:", filter, e);
         return () => true;
       }
-      return rawValue => {
-        const actualValue = convert(rawValue);
-        return arr.includes(actualValue);
+      return (rawValue) => {
+        const actual = convert(rawValue);
+        return arr.includes(actual);
       };
     }
 
-    // 10.2) Comparison syntax "==20", ">=100", "<10", etc.
-    const comparisonPattern = /^(==|!=|>=|<=|>|<)\s*(.*)$/;
-    const match = filter.match(comparisonPattern);
+    // Comparison: ==, !=, >, >=, <, <=
+    const comparison = /^(==|!=|>=|<=|>|<)\s*(.*)$/;
+    const match = filter.match(comparison);
     if (match) {
       const operator = match[1];
-      const operandStr = match[2].trim();
-      return rawValue => {
+      const rightStr = match[2].trim();
+      return (rawValue) => {
         const leftVal = convert(rawValue);
-        const rightVal = convert(operandStr);
+        const rightVal = convert(rightStr);
         switch (operator) {
           case "==": return leftVal == rightVal;
           case "!=": return leftVal != rightVal;
-          case ">":  return leftVal > rightVal;
-          case "<":  return leftVal < rightVal;
+          case ">":  return leftVal >  rightVal;
+          case "<":  return leftVal <  rightVal;
           case ">=": return leftVal >= rightVal;
           case "<=": return leftVal <= rightVal;
-          default:
-            return true;
+          default:   return true;
         }
       };
     }
 
-    // Otherwise, unrecognized filter pattern
-    console.warn("Unrecognized filter pattern:", filter);
+    console.warn("Unrecognized filter:", filter);
     return () => true;
   }
 
-  // 11) Finally, build the HTML table showing aggregated totals
-  //     plus sub-rows (if more than 1).
+  /*************************************************************
+   *  APPLY FUNCTION AND FORMULA COLUMNS
+   *************************************************************/
+  function applyFunctionsAndFormulas() {
+    // Grab function and formula columns from the config
+    const functionCols = appConfig.filter(c => c.column_type === "function");
+    const formulaCols  = appConfig.filter(c => c.column_type === "formula");
+
+    // For each unique entry in combinedData, apply these columns
+    const allKeys = Object.keys(window.combinedData);
+    allKeys.forEach(key => {
+      const entry = window.combinedData[key];
+      if (!entry) return;
+
+      // Apply to each subRow
+      entry.subRows.forEach(row => {
+        applyFunctionCols(row, functionCols);
+        applyFormulaCols(row, formulaCols);
+      });
+
+      // Re-aggregate so "totals" reflect new columns
+      entry.totals = computeAggregates(entry.subRows);
+
+      // Then also apply function/formula to the newly updated totals (optional)
+      applyFunctionCols(entry.totals, functionCols);
+      applyFormulaCols(entry.totals, formulaCols);
+    });
+
+    console.log("Applied functions & formulas:", window.combinedData);
+  }
+
+  function applyFunctionCols(row, functionCols) {
+    functionCols.forEach(col => {
+      const fnCall = col.function || "";
+      // e.g. "interestIncome(principal, rate)"
+      const match = fnCall.match(/^(\w+)\s*\(([^)]*)\)\s*$/);
+      if (!match) {
+        console.warn("Invalid function definition:", fnCall);
+        return;
+      }
+      const funcName = match[1];
+      const argNames = match[2].split(",").map(a => a.trim()).filter(Boolean);
+
+      if (
+        !window.financial.functions || 
+        !window.financial.functions[funcName] || 
+        typeof window.financial.functions[funcName].implementation !== "function"
+      ) {
+        console.warn(`No function implementation found for "${funcName}"`);
+        return;
+      }
+
+      // gather the argument values from the row
+      const args = argNames.map(arg => row[arg]);
+      // call the function
+      const result = window.financial.functions[funcName].implementation(...args);
+      // store in the row by col.id
+      row[col.id] = result || 0;
+    });
+  }
+
+  function applyFormulaCols(row, formulaCols) {
+    formulaCols.forEach(col => {
+      const expr = col.formula || "";
+      let result;
+      try {
+        // Bring row fields into scope
+        with(row) {
+          result = eval(expr);
+        }
+      } catch (err) {
+        console.error(`Error evaluating formula "${expr}":`, err);
+        result = null;
+      }
+      row[col.id] = result;
+    });
+  }
+
+  // 11) Build the final table with aggregated totals + sub-rows
   function buildTable() {
     const tableContainer = document.createElement("div");
     const table = document.createElement("table");
@@ -458,8 +513,13 @@
     // Table header
     const thead = document.createElement("thead");
     const headerRow = document.createElement("tr");
-    appConfig.forEach(col => {
-      if (col.column_type !== "data") return;
+
+    // Show columns for data, function, and formula
+    const displayCols = appConfig.filter(c =>
+      ["data", "function", "formula"].includes(c.column_type)
+    );
+
+    displayCols.forEach(col => {
       const th = document.createElement("th");
       th.innerText = col.heading;
       headerRow.appendChild(th);
@@ -469,48 +529,41 @@
 
     // Table body
     const tbody = document.createElement("tbody");
+    const combinedKeys = Object.keys(window.combinedData);
 
-    Object.keys(window.combinedData).forEach(uniqueVal => {
+    combinedKeys.forEach(uniqueVal => {
       const entry = window.combinedData[uniqueVal];
-      if (!entry) return; // might have been deleted by filter
+      if (!entry) return; // filtered out?
 
       const { subRows, totals } = entry;
 
-      // Build "totals" row
+      // Build "totals" row (the aggregated row for this uniqueVal)
       const totalsRow = document.createElement("tr");
-      // We'll give it a data attribute to toggle sub-rows
       if (subRows.length > 1) {
-        totalsRow.style.cursor = "pointer";
+        totalsRow.classList.add("totalsRow");
         totalsRow.setAttribute("data-toggle", uniqueVal);
       }
 
-      appConfig.forEach(col => {
-        if (col.column_type !== "data") return;
+      displayCols.forEach(col => {
         const td = document.createElement("td");
         const rawValue = totals[col.id];
-        const formattedValue = formatValue(rawValue, col.data_type);
-        td.innerText = formattedValue;
+        td.innerText = formatValue(rawValue, col.data_type);
         totalsRow.appendChild(td);
       });
 
       tbody.appendChild(totalsRow);
 
-      // If there's more than one sub-row, we create hidden rows
+      // If multiple sub-rows, create hidden child rows
       if (subRows.length > 1) {
-        subRows.forEach((rawRow, index) => {
-          // Each sub-row
+        subRows.forEach(sRow => {
           const subTr = document.createElement("tr");
-          // Hide by default
           subTr.style.display = "none";
-          // Use a class or data attribute to identify it
           subTr.classList.add(`subrow-${uniqueVal}`);
 
-          appConfig.forEach(col => {
-            if (col.column_type !== "data") return;
+          displayCols.forEach(col => {
             const subTd = document.createElement("td");
-            const rawValue = rawRow[col.id];
-            const formattedValue = formatValue(rawValue, col.data_type);
-            subTd.innerText = formattedValue;
+            const rawValue = sRow[col.id];
+            subTd.innerText = formatValue(rawValue, col.data_type);
             subTr.appendChild(subTd);
           });
 
@@ -519,24 +572,43 @@
       }
     });
 
+    // **** NEW: Calculate "Total of Totals" ****
+    const grandTotalsRow = document.createElement("tr");
+    // gather the totals from each combinedData entry:
+    const allTotals = combinedKeys
+      .map(uniqueVal => window.combinedData[uniqueVal]?.totals)
+      .filter(Boolean);
+    // compute the grand totals (including function/formula columns!)
+    const grandTotals = computeAggregates(allTotals);
+
+    // We'll display "Grand Totals" in the cell for the unique column,
+    // or in the first cell if you prefer
+    displayCols.forEach(col => {
+      const td = document.createElement("td");
+      if (col.id === uniqueColumn) {
+        td.innerText = "Grand Totals"; 
+      } else {
+        const rawValue = grandTotals[col.id];
+        td.innerText = formatValue(rawValue, col.data_type);
+      }
+      grandTotalsRow.appendChild(td);
+    });
+    // append the grand totals row to the end:
+    tbody.appendChild(grandTotalsRow);
+
+    // Attach the table body
     table.appendChild(tbody);
     tableContainer.appendChild(table);
     document.body.appendChild(tableContainer);
 
-    // Add a click handler to toggle sub-rows
+    // Toggle subrows on click
     table.addEventListener("click", e => {
-      // Did we click on a row with data-toggle?
       const tr = e.target.closest("tr[data-toggle]");
       if (!tr) return;
       const key = tr.getAttribute("data-toggle");
-      // Toggle all .subrow-[key]
-      const subRows = table.querySelectorAll(`.subrow-${key}`);
-      subRows.forEach(subTr => {
-        if (subTr.style.display === "none") {
-          subTr.style.display = "";
-        } else {
-          subTr.style.display = "none";
-        }
+      const subs = table.querySelectorAll(`.subrow-${key}`);
+      subs.forEach(subTr => {
+        subTr.style.display = subTr.style.display === "none" ? "" : "none";
       });
     });
   }
