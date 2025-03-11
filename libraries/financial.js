@@ -14,7 +14,6 @@ window.financial = {
       description: "Calculates the cost of funds",
       implementation: function(principal, rate) {
         // Access the cached treasury curve data.
-        console.log('window.financial.api.treasuryCurve._cache', window.financial.api._cache)
         if (!window.financial.api._cache) {
           console.warn('Treasury data not yet loaded. Returning default value.');
           return 0;
