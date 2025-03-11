@@ -128,13 +128,20 @@
 
         // 6.4) Store the result
         window.rawData[sourceName] = filteredRows;
+
+        // statistics of filtered dataset(s) 
+        window.statistics = window.statistics || {};
+        window.statistics[sourceName] = computeStatistics(filteredRows);
+
         console.log(`Loaded CSV for "${sourceName}":`, filteredRows);
 
         // 6.5) Increment loadedCount. If all done, combine data
         loadedCount++;
         if (loadedCount === uniqueSources.length) {
+          // *load done*
           const modalBackdrop = document.getElementById("modalBackdrop");
           document.body.removeChild(modalBackdrop);
+          console.log('statistics', window.statistics);
           // Once all CSVs are loaded, combine
           combineData();
           // Then apply functions and formulas
@@ -540,7 +547,8 @@
       // Build "totals" row (the aggregated row for this uniqueVal)
       const totalsRow = document.createElement("tr");
       if (subRows.length > 1) {
-        totalsRow.classList.add("totalsRow");
+        totalsRow.classList.add("groupHeadRow");
+        totalsRow.style.cursor = "pointer";
         totalsRow.setAttribute("data-toggle", uniqueVal);
       }
 
@@ -559,7 +567,7 @@
           const subTr = document.createElement("tr");
           subTr.style.display = "none";
           subTr.classList.add(`subrow-${uniqueVal}`);
-
+          subTr.classList.add("groupRow");
           displayCols.forEach(col => {
             const subTd = document.createElement("td");
             const rawValue = sRow[col.id];
@@ -613,3 +621,100 @@
     });
   }
 })();
+
+// -------------------- IndexedDB Helper Functions --------------------
+
+// Open (or create) the database and object store.
+function openDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('FinancialDB', 1);
+    request.onerror = function() {
+      reject('IndexedDB error');
+    };
+    request.onupgradeneeded = function(event) {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('apiCache')) {
+        db.createObjectStore('apiCache', { keyPath: 'id' });
+      }
+    };
+    request.onsuccess = function(event) {
+      resolve(event.target.result);
+    };
+  });
+}
+
+// Retrieve a record from IndexedDB by key.
+function getRecordFromIndexedDB(key) {
+  return openDatabase().then(db => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['apiCache'], 'readonly');
+      const store = transaction.objectStore('apiCache');
+      const request = store.get(key);
+      request.onsuccess = function(event) {
+        resolve(event.target.result); // Expected format: { id, data, timestamp }
+      };
+      request.onerror = function() {
+        reject('Error reading from IndexedDB');
+      };
+    });
+  });
+}
+
+// Save a record into IndexedDB.
+function saveRecordToIndexedDB(key, data) {
+  return openDatabase().then(db => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['apiCache'], 'readwrite');
+      const store = transaction.objectStore('apiCache');
+      const record = {
+        id: key,
+        data: data,
+        timestamp: Date.now()
+      };
+      const request = store.put(record);
+      request.onsuccess = function() {
+        resolve();
+      };
+      request.onerror = function() {
+        reject('Error saving to IndexedDB');
+      };
+    });
+  });
+}
+
+// -------------------- Statistics Helper Functions --------------------
+
+function computeStatistics(data) { 
+  const numericColumns = {};
+  data.forEach(item => {
+    Object.keys(item).forEach(key => {
+      const v = parseFloat(item[key]);
+      if (!isNaN(v)) {
+        if (!numericColumns[key]) numericColumns[key] = [];
+        numericColumns[key].push(v);
+      }
+    });
+  });
+  
+  const results = {};
+  Object.keys(numericColumns).forEach(col => {
+    const vals = numericColumns[col];
+    const count = vals.length;
+    const mean = vals.reduce((a, b) => a + b, 0) / count;
+    // Population variance: average of squared differences from the mean.
+    const variance = vals.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / count;
+    const stdDeviation = Math.sqrt(variance);
+    
+    results[col] = {
+      min: Math.min(...vals),
+      max: Math.max(...vals),
+      mean: mean,
+      count: count,
+      variance: variance,
+      stdDeviation: stdDeviation,
+      twoStdDeviations: [mean - 2 * stdDeviation, mean + 2 * stdDeviation],
+      threeStdDeviations: [mean - 3 * stdDeviation, mean + 3 * stdDeviation]
+    };
+  });
+  return results;
+}
