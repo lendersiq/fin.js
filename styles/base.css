@@ -33,10 +33,6 @@ th {
     z-index: 2;
 }
 
-tr:nth-child(even) {
-    background-color: #E7EFEB;
-}
-
 tr:hover {
     background-color: #EAEFFD;
 }
@@ -45,11 +41,20 @@ td {
     transition: background-color 0.3s;
 }
 
-.totalsRow {
-    background-color: rgba(171, 64, 96, 0.8);
-    cursor: pointer;
+.groupHeadRow {
+    background-color: rgba(35, 100, 65, 1);
+    color: white;
 }
 
-.totalsRow:hover {
-    background-color: rgba(171, 64, 96, 0.6);
+.groupHeadRow:hover {
+    background-color: rgba(95, 160, 125, 1);
+}
+
+.groupRow {
+    background-color: rgba(75, 140, 105, 1);
+    color: white;
+}
+
+.groupRow:hover {
+    background-color: rgba(95, 160, 125, 1);
 }
