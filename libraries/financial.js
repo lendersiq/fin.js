@@ -193,19 +193,19 @@ window.financial = {
             depositsRisk * dictionaries.depositRiskWeights["deposits"] +
             NSFsRisk * dictionaries.depositRiskWeights["nsf"];
       }
-    }
-  },
-
-  /*
-  * @param {number} expectedLifeMonths - Expected life of the deposit in months.
-  * @param {string} depositType - Type of deposit ('checking', 'savings', 'certificates').
-  * @returns {number} FTP rate as a decimal.
-  */
-  calculateFtpRate: {
-    description: "Calculates the funds transfer pricing credit using the discountFTP dictionary and Treasury rates from an external API.",
-    implementation: function(expectedLifeMonths, depositType) {
+    },
+    /*
+    * @param {number} expectedLifeMonths - Expected life of the deposit in months.
+    * @param {string} depositType - Type of deposit ('checking', 'savings', 'certificates').
+    * @returns {number} FTP rate as a decimal.
+    */
+    calculateFtpRate: {
+      description: "Calculates the funds transfer pricing credit using the discountFTP dictionary and Treasury rates from an external API.",
+      implementation: function(expectedLifeMonths, depositType) {
         // Step 1: Retrieve the Treasury rate from the external API
-        const treasuryRate = treasuryCurve.values[expectedLifeMonths];
+
+        //console.log('financial.api', financial.api._cache)
+        const treasuryRate = financial.api._cache.treasuryCurve.values[expectedLifeMonths];
         
         if (treasuryRate === undefined) {
             throw new Error(`Treasury rate not found for ${expectedLifeMonths} months.`);
@@ -251,10 +251,12 @@ window.financial = {
 
   checkingProfit: {
     description: "Calculates the profit of checking accounts",
-    implementation: function(balance, interest=null, rate=null, charges=null, waived=null, open, source, deposits=null, withdrawals=null) {
-
-      const creditRate = calculateFtpRate.implementation(12, 'checking');
+    implementation: function(balance, open, interest=null, rate=null, charges=null, waived=null, deposits=null, withdrawals=null) {
+      const sourceIndex = 'checking';
+      const creditRate = financial.functions.calculateFtpRate.implementation(12, sourceIndex);
       const creditForFunding = creditRate * balance * (1 - financial.attributes.ddaReserveRequired.value);
+      return creditForFunding;
+
       const { monthsSinceOpen, yearsSinceOpen } = financial.functions.sinceOpen.implementation(open);
 
       var operatingExpense = 100;  //default
@@ -274,7 +276,7 @@ window.financial = {
         accountType = "Business";
       }
       interestExpense = interest * window.statistics[sourceIndex][aiTranslator(Object.keys(window.statistics[sourceIndex]), 'interest')].YTDfactor;
-              if (financial.dictionaries.annualOperatingExpense[sourceIndex].values[accountType]) {
+      if (financial.dictionaries.annualOperatingExpense[sourceIndex].values[accountType]) {
                   operatingExpense = financial.dictionaries.annualOperatingExpense[sourceIndex].values[accountType];
               }
               fraudLoss = organization.attributes.capitalTarget.value * financial.attributes.fraudLossFactor.value * balance;
@@ -295,7 +297,9 @@ window.financial = {
           //console.log(`portfolio: ${portfolio}, balance: ${balance}, creditRate: ${creditRate}, creditForFunding: ${creditForFunding}, rate: ${rate} interestExpense: ${interestExpense}, charges: ${charges}, waived: ${waived}, deposits: ${deposits}, deposits expense: ${depositsExpense}, withdrawals expense: ${withdrawalsExpense}, operatingExpense: ${operatingExpense}, fraudLoss: ${fraudLoss}, pretax: ${pretaxProfit}, taxAdj: ${1 - window.libraries.organization.attributes.taxRate.value}, depositProfit: ${profit}`);
           return profit;
       }
+    },
   },
+
   api: {
     // In-memory cache for each API endpoint.
     _cache: {},
