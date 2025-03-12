@@ -340,6 +340,22 @@
           break;
         }
 
+        case "date": {
+          // find earliest date
+          let earliest = null;
+          values.forEach(dateStr => {
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime())) { // valid date check
+              if (earliest === null || d < earliest) {
+                earliest = d;
+              }
+            }
+          });
+          // Convert to ISO string or another preferred date format if a valid date was found
+          totals[colId] = earliest ? earliest.toISOString().split('T')[0] : "";
+          break;
+        }
+
         default:
           // string => distinct
           const distinct = [...new Set(values)];
