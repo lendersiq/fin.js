@@ -73,21 +73,55 @@
   const modal = document.createElement("div");
   Object.assign(modal.style, {
     background: "#fff",
-    padding: "1rem",
+    padding: "0",
     borderRadius: "5px",
     width: "300px",
     maxHeight: "80vh",
     overflowY: "auto",
   });
+  const modalHeader = document.createElement("div");
+  modalHeader.classList.add("modal-header");
+  const closeButton = document.createElement("button");
+  closeButton.classList.add("close-button")
+  closeButton.ariaLabel = "Close Modal";
+  closeButton.innerHTML = "&times;";
+  closeButton.addEventListener("click", () => {
+    document.body.removeChild(modalBackdrop);
+  });
 
-  const title = document.createElement("h2");
-  title.textContent = "Upload CSV Files";
-  modal.appendChild(title);
+  modalHeader.appendChild(closeButton);
+  modal.appendChild(modalHeader);
+  const modalContent = document.createElement("div");
+  modalContent.classList.add("modal-content");
+  const modalHero = document.createElement('span');
+  modalHero.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 200 200">
+      <!-- Bottom rotated square -->
+      <g transform="rotate(45, 100, 100)">
+        <rect x="35" y="35" width="130" height="130" fill="#0b3260" opacity="0.75" />
+        <text x="100" y="135" font-family="Arial, sans-serif" font-size="90" fill="#ffffff" text-anchor="middle" >
+          JS
+        </text>
+      </g>
+      <!-- Top square -->
+      <g>
+        <rect x="35" y="35" width="130" height="130" fill="#0b6031" opacity="0.65" />
+        <text x="100" y="130" font-family="Arial, sans-serif" font-size="80" fill="#ffffff" text-anchor="middle">
+          FI
+        </text>
+      </g>
+    </svg>`;
+  modalContent.appendChild(modalHero);
+
+  const instructions = document.createElement('p');
+  instructions.textContent = 'Select data from the secure source.';
+  modalContent.appendChild(instructions);
 
   // For each source, create a file input
   uniqueSources.forEach(sourceName => {
     const label = document.createElement("label");
-    label.textContent = `Select CSV for: ${sourceName}`;
+    label.textContent = `Choose ${sourceName} Source`;
+    //label.classList.add("custom-file-upload");
 
     const fileInput = document.createElement("input");
     fileInput.type = "file";
@@ -153,21 +187,12 @@
       reader.readAsText(file);
     });
 
-    // Add to modal
     label.appendChild(document.createElement("br"));
     label.appendChild(fileInput);
-    modal.appendChild(label);
-    modal.appendChild(document.createElement("hr"));
+    modalContent.appendChild(label);
+    modalContent.appendChild(document.createElement("hr"));
   });
-
-  // "Done" button to close the modal
-  const closeBtn = document.createElement("button");
-  closeBtn.textContent = "Done";
-  closeBtn.addEventListener("click", () => {
-    document.body.removeChild(modalBackdrop);
-  });
-  modal.appendChild(closeBtn);
-
+  modal.appendChild(modalContent)
   modalBackdrop.appendChild(modal);
   document.body.appendChild(modalBackdrop);
 
