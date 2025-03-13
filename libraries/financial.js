@@ -203,29 +203,26 @@ window.financial = {
       description: "Calculates the funds transfer pricing credit using the discountFTP dictionary and Treasury rates from an external API.",
       implementation: function(expectedLifeMonths, depositType) {
         // Step 1: Retrieve the Treasury rate from the external API
-
         //console.log('financial.api', financial.api._cache)
         const treasuryRate = financial.api._cache.treasuryCurve.values[expectedLifeMonths];
         
         if (treasuryRate === undefined) {
             throw new Error(`Treasury rate not found for ${expectedLifeMonths} months.`);
-        }
-        
+        }      
         // Initialize total adjustments
         let totalAdjustments = 0;
-
         // Helper function to get adjustment value
         function getAdjustmentFactor(adjustmentType) {
-            const adjustment = financial.dictionaries.discountFTP[adjustmentType];
-            if (!adjustment) return 0;
-        
-            if (depositType === 'certificate') {
-                // Determine term based on expectedLifeMonths
-                const term = expectedLifeMonths <= 12 ? 'shortTerm' : 'longTerm';
-                return adjustment.certificates.values[term] || 0;
-            } else {
-                return adjustment[depositType]?.value || 0;
-            }
+          const adjustment = financial.dictionaries.discountFTP[adjustmentType];
+          if (!adjustment) return 0;
+      
+          if (depositType === 'certificate') {
+              // Determine term based on expectedLifeMonths
+              const term = expectedLifeMonths <= 12 ? 'shortTerm' : 'longTerm';
+              return adjustment.certificates.values[term] || 0;
+          } else {
+              return adjustment[depositType]?.value || 0;
+          }
         }
 
         // Step 2: Calculate Adjustments using the dictionary
@@ -237,65 +234,63 @@ window.financial = {
         
         // Step 3: Sum all adjustments
         totalAdjustments = interestRateRiskAdjustment
-                        - liquidityAdjustment
-                        + operationalRiskAdjustment
-                        + regulatoryRiskAdjustment
-                        + depositAcquisitionCost;
+          - liquidityAdjustment
+          + operationalRiskAdjustment
+          + regulatoryRiskAdjustment
+          + depositAcquisitionCost;
 
         // Step 4: Calculate FTP Rate
         const ftpRate = treasuryRate - totalAdjustments;
         //console.log('FTP log', treasuryRate, interestRateRiskAdjustment.toFixed(4), liquidityAdjustment, operationalRiskAdjustment, depositAcquisitionCost, regulatoryRiskAdjustment, ftpRate);
         return ftpRate;
-    }
-  },
-
-  checkingProfit: {
-    description: "Calculates the profit of checking accounts",
-    implementation: function(balance, open, interest=null, rate=null, charges=null, waived=null, deposits=null, withdrawals=null) {
-      const sourceIndex = 'checking';
-      const creditRate = financial.functions.calculateFtpRate.implementation(12, sourceIndex);
-      const creditForFunding = creditRate * balance * (1 - financial.attributes.ddaReserveRequired.value);
-      return creditForFunding;
-
-      const { monthsSinceOpen, yearsSinceOpen } = financial.functions.sinceOpen.implementation(open);
-
-      var operatingExpense = 100;  //default
-      var fraudLoss = 0;
-      var interestExpense = 0;
-  
-      const annualDeposits = deposits / yearsSinceOpen;
-      const annualWithdrawals = withdrawals / yearsSinceOpen;
-        
-      //aiIdConsumerSmallBiz  
-      //const consumerMaximum = financial.dictionaries.consumerMaximum.values[sourceIndex];
-      //const params = {balance, interest, sourceIndex, annualDeposits, annualWithdrawals, consumerMaximum};
-      //const isBusiness = aiIsBusiness([params]);  // @ai.js
-      isBusiness = false;
-      let accountType = "Consumer";
-      if (isBusiness) {
-        accountType = "Business";
       }
-      interestExpense = interest * window.statistics[sourceIndex][aiTranslator(Object.keys(window.statistics[sourceIndex]), 'interest')].YTDfactor;
-      if (financial.dictionaries.annualOperatingExpense[sourceIndex].values[accountType]) {
-                  operatingExpense = financial.dictionaries.annualOperatingExpense[sourceIndex].values[accountType];
-              }
-              fraudLoss = organization.attributes.capitalTarget.value * financial.attributes.fraudLossFactor.value * balance;
-          
-          
-          let feeIncome = 0;
-          if (charges) {
-              const netCharges = waived ? (charges - waived) : charges;
-              feeIncome = netCharges * window.statistics[sourceIndex][aiTranslator(Object.keys(window.statistics[sourceIndex]), 'charges')].YTDfactor;
-          }
+    },
 
-          const depositsExpense = deposits * financial.attributes.depositUnitExpense.value;            
-          const withdrawalsExpense =  withdrawals * financial.attributes.withdrawalUnitExpense.value;
-          const pretaxIncome = creditForFunding + feeIncome;
-          const pretaxExpense = interestExpense + depositsExpense + withdrawalsExpense + operatingExpense + fraudLoss; 
-          const pretaxProfit = pretaxIncome - pretaxExpense;
-          const profit = pretaxProfit * (1 - window.libraries.organization.attributes.taxRate.value);
-          //console.log(`portfolio: ${portfolio}, balance: ${balance}, creditRate: ${creditRate}, creditForFunding: ${creditForFunding}, rate: ${rate} interestExpense: ${interestExpense}, charges: ${charges}, waived: ${waived}, deposits: ${deposits}, deposits expense: ${depositsExpense}, withdrawals expense: ${withdrawalsExpense}, operatingExpense: ${operatingExpense}, fraudLoss: ${fraudLoss}, pretax: ${pretaxProfit}, taxAdj: ${1 - window.libraries.organization.attributes.taxRate.value}, depositProfit: ${profit}`);
-          return profit;
+    checkingProfit: {
+      description: "Calculates the profit of checking accounts",
+      implementation: function(balance, open, interest=null, rate=null, charges=null, waived=null, deposits=null, withdrawals=null) {
+        const sourceIndex = 'checking';
+        const creditRate = financial.functions.calculateFtpRate.implementation(12, sourceIndex);
+        const creditForFunding = creditRate * balance * (1 - financial.attributes.ddaReserveRequired.value);
+        const { monthsSinceOpen, yearsSinceOpen } = financial.functions.sinceOpen.implementation(open);
+
+        return creditRate;
+        var operatingExpense = 100;  //default
+        var fraudLoss = 0;
+        var interestExpense = 0;
+    
+        const annualDeposits = deposits / yearsSinceOpen;
+        const annualWithdrawals = withdrawals / yearsSinceOpen;
+          
+        //aiIdConsumerSmallBiz  
+        //const consumerMaximum = financial.dictionaries.consumerMaximum.values[sourceIndex];
+        //const params = {balance, interest, sourceIndex, annualDeposits, annualWithdrawals, consumerMaximum};
+        //const isBusiness = aiIsBusiness([params]);  // @ai.js
+        isBusiness = false;
+        let accountType = "Consumer";
+        if (isBusiness) {
+          accountType = "Business";
+        }
+        interestExpense = interest * window.statistics[sourceIndex][aiTranslator(Object.keys(window.statistics[sourceIndex]), 'interest')].YTDfactor;
+        if (financial.dictionaries.annualOperatingExpense[sourceIndex].values[accountType]) {
+          operatingExpense = financial.dictionaries.annualOperatingExpense[sourceIndex].values[accountType];
+        }
+        fraudLoss = organization.attributes.capitalTarget.value * financial.attributes.fraudLossFactor.value * balance;
+          
+        let feeIncome = 0;
+        if (charges) {
+            const netCharges = waived ? (charges - waived) : charges;
+            feeIncome = netCharges * window.statistics[sourceIndex][aiTranslator(Object.keys(window.statistics[sourceIndex]), 'charges')].YTDfactor;
+        }
+
+        const depositsExpense = deposits * financial.attributes.depositUnitExpense.value;            
+        const withdrawalsExpense =  withdrawals * financial.attributes.withdrawalUnitExpense.value;
+        const pretaxIncome = creditForFunding + feeIncome;
+        const pretaxExpense = interestExpense + depositsExpense + withdrawalsExpense + operatingExpense + fraudLoss; 
+        const pretaxProfit = pretaxIncome - pretaxExpense;
+        const profit = pretaxProfit * (1 - window.libraries.organization.attributes.taxRate.value);
+        //console.log(`portfolio: ${portfolio}, balance: ${balance}, creditRate: ${creditRate}, creditForFunding: ${creditForFunding}, rate: ${rate} interestExpense: ${interestExpense}, charges: ${charges}, waived: ${waived}, deposits: ${deposits}, deposits expense: ${depositsExpense}, withdrawals expense: ${withdrawalsExpense}, operatingExpense: ${operatingExpense}, fraudLoss: ${fraudLoss}, pretax: ${pretaxProfit}, taxAdj: ${1 - window.libraries.organization.attributes.taxRate.value}, depositProfit: ${profit}`);
+        return profit;
       }
     },
   },
