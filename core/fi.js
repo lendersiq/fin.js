@@ -27,6 +27,7 @@
   loadScript("../../libraries/financial.js", () => {
     console.log("libraries/financial.js loaded");
   });
+  renderFavicon();
 
   // 2) Identify the unique column config (exactly one assumed)
   const uniqueConfig = appConfig.find(
@@ -75,7 +76,7 @@
     background: "#fff",
     padding: "0",
     borderRadius: "5px",
-    width: "300px",
+    width: "400px",
     maxHeight: "80vh",
     overflowY: "auto",
   });
@@ -121,11 +122,12 @@
   uniqueSources.forEach(sourceName => {
     const label = document.createElement("label");
     label.textContent = `Choose ${sourceName} Source`;
-    //label.classList.add("custom-file-upload");
+    label.classList.add("custom-file-upload");
 
     const fileInput = document.createElement("input");
     fileInput.type = "file";
     fileInput.accept = ".csv";
+    fileInput.classList.add("hidden-file-input");
 
     fileInput.addEventListener("change", evt => {
       const file = evt.target.files[0];
@@ -190,7 +192,6 @@
     label.appendChild(document.createElement("br"));
     label.appendChild(fileInput);
     modalContent.appendChild(label);
-    modalContent.appendChild(document.createElement("hr"));
   });
   modal.appendChild(modalContent)
   modalBackdrop.appendChild(modal);
@@ -256,7 +257,6 @@
 
   // --- Combine data across sources into window.combinedData ---
   function combineData() {
-    // Start fresh
     window.combinedData = {};
 
     // Gather all sub-rows
@@ -276,20 +276,20 @@
         window.combinedData[uniqueValue].subRows.push(row);
       });
     });
+ 
 
     // Simple aggregator to get initial "totals" for each uniqueVal
     // We'll re-run aggregator after we apply functions/formulas too.
     Object.keys(window.combinedData).forEach(uniqueVal => {
       const entry = window.combinedData[uniqueVal];
       const subRows = entry.subRows;
-
+      
       if (subRows.length === 1) {
         entry.totals = { ...subRows[0] };
       } else {
         entry.totals = computeAggregates(subRows);
       }
     });
-
     // Apply filters from appConfig (on totals if desired)
     applyFilters();
 
@@ -478,6 +478,8 @@
    *  APPLY FUNCTION AND FORMULA COLUMNS
    *************************************************************/
   function applyFunctionsAndFormulas() {
+    let count = 0;
+    let uniqueCount = 0;
     // Grab function and formula columns from the config
     const functionCols = appConfig.filter(c => c.column_type === "function");
     const formulaCols  = appConfig.filter(c => c.column_type === "formula");
@@ -487,6 +489,8 @@
     allKeys.forEach(key => {
       const entry = window.combinedData[key];
       if (!entry) return;
+      count += entry.subRows.length;
+      uniqueCount += 1;
 
       // Apply to each subRow
       entry.subRows.forEach(row => {
@@ -502,6 +506,9 @@
       applyFormulaCols(entry.totals, formulaCols);
     });
 
+    window.statistics['filtered'] = window.statistics['filtered'] || {};
+    window.statistics['filtered'].count = count;
+    window.statistics['filtered'].unique = uniqueCount;
     console.log("Applied functions & formulas:", window.combinedData);
   }
 
@@ -724,6 +731,16 @@ function saveRecordToIndexedDB(key, data) {
 }
 
 // -------------------- Statistics Helper Functions --------------------
+function yearToDateFactor(fieldName) {
+  let factor = 1; // default to 1
+  const lowerStr = fieldName.toLowerCase();
+  if (lowerStr.includes("mtd")) {
+    factor = 12;
+  } else if (lowerStr.includes("day") || lowerStr.includes("daily")) {
+    factor = 365
+  }
+  return factor;
+} 
 
 function computeStatistics(data) { 
   const numericColumns = {};
@@ -756,6 +773,48 @@ function computeStatistics(data) {
       twoStdDeviations: [mean - 2 * stdDeviation, mean + 2 * stdDeviation],
       threeStdDeviations: [mean - 3 * stdDeviation, mean + 3 * stdDeviation]
     };
+    results[col].YTDfactor = yearToDateFactor(col);
   });
   return results;
+}
+
+function renderFavicon() {
+  const canvas = document.createElement('canvas'); 
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+
+  // Define the SVG as a string
+  const svg = `
+  <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 200 200">
+    <!-- Bottom rotated square -->
+    <g transform="rotate(45, 100, 100)">
+      <rect x="35" y="35" width="130" height="130" fill="none" stroke="#007acc" stroke-width="4"/>
+    </g>
+    <!-- Top square -->
+    <g>
+      <rect x="35" y="35" width="130" height="130" fill="#4caf50" opacity="0.8" />
+      <text x="100" y="130" font-family="Arial, sans-serif" font-size="100" fill="#ffffff" text-anchor="middle">
+        FI
+      </text>
+    </g>
+  </svg>`;
+
+  // Create an image from the SVG
+  const img = new Image();
+  img.onload = function () {
+    // Draw the SVG onto the canvas
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // Generate the favicon
+    const faviconUrl = canvas.toDataURL('image/png');
+    let favicon = document.querySelector('link[rel="icon"]');
+    if (!favicon) {
+      favicon = document.createElement('link');
+      favicon.rel = 'icon';
+      document.head.appendChild(favicon);
+    }
+    favicon.href = faviconUrl;
+  };
+  img.src = `data:image/svg+xml;base64,${btoa(svg)}`;
 }
