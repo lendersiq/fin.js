@@ -24,10 +24,17 @@
   console.log(asciiFIjs);
 
   // Load scripts in the correct order
-  loadScript("../../libraries/financial.js", () => {
-    console.log("libraries/financial.js loaded");
+  loadScript("../../core/ai.js", () => {
+    console.log("ai.js loaded");
+    loadScript("../../libraries/financial.js", () => {
+      console.log("libraries/financial.js loaded");
+       // function tests
+      console.log('Function Tests')
+      console.log ('Function parameter test: ', getFunctionParameters(window.financial.functions['loanProfit'].implementation));
+    });
   });
   renderFavicon();
+ 
 
   // 2) Identify the unique column config (exactly one assumed)
   const uniqueConfig = appConfig.find(
@@ -40,8 +47,12 @@
   const uniqueColumn = uniqueConfig.id; // e.g. "Portfolio"
 
   // 3) Prepare global data structures
-  window.rawData = {};      // rawData[sourceName] => array of filtered rows
+  window.rawData = {};
+  window.filteredData = {};
+  window.cleanData = {};      // filteredData[sourceName] => array of filtered rows
   window.combinedData = {}; // combined object keyed by unique column
+  window.paramMap = {}; //The first time we call buildParamValues for "loan", we compute and store the match for each paramName into window.paramMap.loan. After that, we skip the expensive findBestKey AI calls.
+  window.logger = true;
 
   // 4) Gather unique source names
   const uniqueSources = [
@@ -128,7 +139,6 @@
     fileInput.type = "file";
     fileInput.accept = ".csv";
     fileInput.classList.add("hidden-file-input");
-
     fileInput.addEventListener("change", evt => {
       const file = evt.target.files[0];
       if (!file) return;
@@ -137,10 +147,12 @@
       reader.onload = e => {
         const csvContent = e.target.result;
 
-        // 6.1) Identify relevant config columns for this source
-        const relevantConfigItems = appConfig.filter(
-          c => c.source_name === sourceName && c.column_type === "data"
+        // 6.1) Identify relevant config columns for our configuration testing
+        const relevantConfigItems = appConfig.filter(c =>
+          (c.source_name === sourceName || !c.source_name) &&
+          (c.column_type === "data" || c.column_type === "function")
         );
+        
         // The columns' IDs
         const relevantColumns = relevantConfigItems.map(c => c.id);
         // Always ensure the unique column is included
@@ -149,10 +161,20 @@
         }
 
         // 6.2) Parse the CSV
-        const parsedRows = parseCSV(csvContent);
+        window.rawData[sourceName] = parseCSV(csvContent);
+
+        // statistics of filtered dataset(s) 
+        window.statistics = window.statistics || {};
+        window.statistics[sourceName] = computeStatistics(window.rawData[sourceName]);
+
+        console.log(`raw data before for ${sourceName}: `, window.rawData[sourceName]);
+        applyFilterstoRawData(sourceName);
+        console.log(`raw data after filters for ${sourceName}:`, window.rawData[sourceName]);
+        applyFunctions(sourceName);
+        console.log(`raw data after with function calls for ${sourceName}:`, window.rawData[sourceName]);
 
         // 6.3) Filter out columns not in relevantColumns
-        const filteredRows = parsedRows.map(row => {
+        const filteredRows = window.rawData[sourceName].map(row => {
           const newRow = {};
           relevantColumns.forEach(col => {
             if (row.hasOwnProperty(col)) {
@@ -163,14 +185,9 @@
         });
 
         // 6.4) Store the result
-        window.rawData[sourceName] = filteredRows;
-
-        // statistics of filtered dataset(s) 
-        window.statistics = window.statistics || {};
-        window.statistics[sourceName] = computeStatistics(filteredRows);
-
-        console.log(`Loaded CSV for "${sourceName}":`, filteredRows);
-
+        window.cleanData[sourceName] = filteredRows;
+        console.log('filterd rows', filteredRows);
+        
         // 6.5) Increment loadedCount. If all done, combine data
         loadedCount++;
         if (loadedCount === uniqueSources.length) {
@@ -180,13 +197,18 @@
           console.log('statistics', window.statistics);
           // Once all CSVs are loaded, combine
           combineData();
-          // Then apply functions and formulas
-          applyFunctionsAndFormulas();
+          // Then apply formulas
+          //applyFunctionsAndFormulas();
+          applyFormulas();
           // Finally build the table
           buildTable();
         }
       };
       reader.readAsText(file);
+
+      // update source selectors` labels
+      label.classList.add('completed');
+      label.innerHTML = `${sourceName}: ${file.name}`; 
     });
 
     label.appendChild(document.createElement("br"));
@@ -260,8 +282,9 @@
     window.combinedData = {};
 
     // Gather all sub-rows
-    Object.keys(window.rawData).forEach(sourceName => {
-      const rows = window.rawData[sourceName];
+    Object.keys(window.cleanData).forEach(sourceName => {
+      const rows = window.cleanData[sourceName];
+      console.log('sourceData before combining', rows)
       rows.forEach(row => {
         const uniqueValue = row[uniqueColumn];
         if (!uniqueValue) return; // skip if missing the unique ID
@@ -277,9 +300,8 @@
       });
     });
  
-
     // Simple aggregator to get initial "totals" for each uniqueVal
-    // We'll re-run aggregator after we apply functions/formulas too.
+    // re-running aggregator after we apply formulas
     Object.keys(window.combinedData).forEach(uniqueVal => {
       const entry = window.combinedData[uniqueVal];
       const subRows = entry.subRows;
@@ -388,9 +410,36 @@
           break;
       }
     });
-
     return totals;
   }
+
+  // --- Apply any filters defined in appConfig ---
+  function applyFilterstoRawData(sourceName) {
+    // Only grab filters that match this sourceName, have a filter, and are "data" type
+    const filterConfigs = appConfig.filter(
+      c => c.source_name === sourceName && c.filter && c.column_type === "data"
+    );
+    if (!filterConfigs.length) return;
+  
+    const parsedFilters = filterConfigs.map(cfg => ({
+      column: cfg.id,
+      fn: createFilterFn(cfg.filter, cfg.data_type)
+    }));
+  
+    // Rebuild rawData[sourceName] to include only rows that pass all filters
+    window.rawData[sourceName] = window.rawData[sourceName].filter(row => {
+      for (const filterObj of parsedFilters) {
+        const col = filterObj.column;
+        const value = row[col];
+        if (!filterObj.fn(value)) {
+          // Exclude this row if it fails any filter
+          return false;
+        }
+      }
+      // Keep this row if it passed all filters
+      return true;
+    });
+  }  
 
   // --- Apply any filters defined in appConfig ---
   function applyFilters() {
@@ -475,13 +524,11 @@
   }
 
   /*************************************************************
-   *  APPLY FUNCTION AND FORMULA COLUMNS
+   *  APPLY FORMULA COLUMNS
    *************************************************************/
-  function applyFunctionsAndFormulas() {
+  function applyFormulas() {
     let count = 0;
     let uniqueCount = 0;
-    // Grab function and formula columns from the config
-    const functionCols = appConfig.filter(c => c.column_type === "function");
     const formulaCols  = appConfig.filter(c => c.column_type === "formula");
 
     // For each unique entry in combinedData, apply these columns
@@ -494,51 +541,172 @@
 
       // Apply to each subRow
       entry.subRows.forEach(row => {
-        applyFunctionCols(row, functionCols);
         applyFormulaCols(row, formulaCols);
       });
 
       // Re-aggregate so "totals" reflect new columns
       entry.totals = computeAggregates(entry.subRows);
 
-      // Then also apply function/formula to the newly updated totals (optional)
-      applyFunctionCols(entry.totals, functionCols);
+      // Then also apply formula to the newly updated totals
       applyFormulaCols(entry.totals, formulaCols);
     });
 
     window.statistics['filtered'] = window.statistics['filtered'] || {};
     window.statistics['filtered'].count = count;
     window.statistics['filtered'].unique = uniqueCount;
-    console.log("Applied functions & formulas:", window.combinedData);
+    console.log("Applied to formulas:", window.combinedData);
   }
 
-  function applyFunctionCols(row, functionCols) {
-    functionCols.forEach(col => {
-      const fnCall = col.function || "";
-      // e.g. "interestIncome(principal, rate)"
-      const match = fnCall.match(/^(\w+)\s*\(([^)]*)\)\s*$/);
-      if (!match) {
-        console.warn("Invalid function definition:", fnCall);
-        return;
-      }
-      const funcName = match[1];
-      const argNames = match[2].split(",").map(a => a.trim()).filter(Boolean);
+  // Regex patterns for date detection (YYYY-MM-DD or YYYY/MM/DD)
+  const isoDateRegexDash = /^\d{4}-\d{2}-\d{2}$/;
+  const isoDateRegexSlash = /^\d{4}\/\d{2}\/\d{2}$/;
 
+  // Helper to convert numeric parts to a YYYY-MM-DD string
+  function toDateOnlyString(year, month, day) {
+    // month is 1-based from the split, so no need to +1 or -1 here
+    const mm = String(month).padStart(2, '0');
+    const dd = String(day).padStart(2, '0');
+    return `${year}-${mm}-${dd}`;
+  }
+
+  function buildParamValues(paramNames, row, sourceName) {
+    // 1) Ensure we have a paramMap object for this source
+    if (!window.paramMap[sourceName]) {
+      window.paramMap[sourceName] = {};
+    }
+    
+    // 2) to save compute we examine each paramName, see if we have a cached matched key
+    //    If not, we call findBestKey once and store it.
+    paramNames.forEach(paramName => {
+      if (!window.paramMap[sourceName][paramName]) {
+        const matchedKey = findBestKey(paramName, Object.keys(row));
+        // Store the result (or null if none)
+        window.paramMap[sourceName][paramName] = matchedKey || null;
+      }
+    });
+  
+    // 3) Now build the return array by using the cached mapping
+    return paramNames.map(paramName => {
+      const matchedKey = window.paramMap[sourceName][paramName];
+      
+      // If there's no matched key, return null (or 0, or throw)
+      if (!matchedKey) {
+        return null; 
+      }
+  
+      const rawValue = row[matchedKey];
+  
+      // --- Type Conversion Logic ---
+  
+      // (A) Already a valid Date object? Convert to YYYY-MM-DD string
+      if (rawValue instanceof Date && !isNaN(rawValue)) {
+        const y = rawValue.getFullYear();
+        const m = rawValue.getMonth() + 1;  // zero-based month
+        const d = rawValue.getDate();
+        return toDateOnlyString(y, m, d);
+      }
+  
+      // (B) If it's a number, return as-is
+      if (typeof rawValue === 'number') {
+        return rawValue;
+      }
+  
+      // (C) If it's a string, check if it's an ISO-like date or numeric
+      if (typeof rawValue === 'string') {
+        const trimmed = rawValue.trim();
+  
+        // (C1) ISO date format -> convert to date-only string
+        if (isoDateRegexDash.test(trimmed) || isoDateRegexSlash.test(trimmed)) {
+          const parts = trimmed.split(/[-/]/).map(Number); // e.g. [2024, 12, 17]
+          const [year, month, day] = parts;
+          return toDateOnlyString(year, month, day);
+        }
+  
+        // (C2) If it's numeric -> parse as int or float
+        if (!isNaN(trimmed)) {
+          const asFloat = parseFloat(trimmed);
+          return Number.isInteger(asFloat) ? parseInt(trimmed, 10) : asFloat;
+        }
+  
+        // (C3) Otherwise, just return the trimmed string
+        return trimmed;
+      }
+  
+      // (D) If it's something else (boolean, null, object, etc.), return as-is
+      return rawValue;
+    });
+  }
+
+  /*
+  function getParamNames(func) {
+    const STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/gm;
+    const ARGUMENT_NAMES = /([^\s,]+)/g;
+    const fnStr = func.toString().replace(STRIP_COMMENTS, '');
+    const result = fnStr
+      .slice(fnStr.indexOf('(') + 1, fnStr.indexOf(')'))
+      .match(ARGUMENT_NAMES);
+    return result || [];
+  }
+  */
+
+  function getFunctionParameters(func) {
+    // Convert function to string and extract the parameter portion
+    const funcStr = func.toString();
+    const paramStr = funcStr.slice(funcStr.indexOf('(') + 1, funcStr.indexOf(')'));
+    
+    // Split parameters and process each one
+    const params = paramStr.split(',').map(param => param.trim());
+    
+    const paramNames = [];
+    const paramDefaults = [];
+    
+    params.forEach(param => {
+        // Split on = to separate name and default value
+        const [name, defaultValue] = param.split('=').map(p => p.trim());
+        
+        paramNames.push(name);
+        // If there's no default value, use empty string
+        paramDefaults.push(defaultValue !== undefined ? defaultValue : '');
+    });
+    
+    return { paramNames, paramDefaults };
+  }
+
+  function applyFunctions(sourceName) {
+    const functionCols = appConfig.filter(c => c.column_type === "function");
+    functionCols.forEach(col => {
+      const functionName = col.function || "";
       if (
         !window.financial.functions || 
-        !window.financial.functions[funcName] || 
-        typeof window.financial.functions[funcName].implementation !== "function"
+        !window.financial.functions[functionName] || 
+        typeof window.financial.functions[functionName].implementation !== "function"
       ) {
-        console.warn(`No function implementation found for "${funcName}"`);
+        console.warn(`No function implementation found for "${functionName}"`);
         return;
       }
+   
+      let paramNames = [];
+      if (typeof window.financial.functions[functionName].implementation === 'function') {
+        ({ paramNames, paramDefaults } = getFunctionParameters(window.financial.functions[functionName].implementation));
+        //console.log(`Function "${functionName}" parameter names:`, paramNames);
+      }
 
-      // gather the argument values from the row
-      const args = argNames.map(arg => row[arg]);
-      // call the function
-      const result = window.financial.functions[funcName].implementation(...args);
-      // store in the row by col.id
-      row[col.id] = result || 0;
+      window.rawData[sourceName].forEach((row, rowIndex) => {
+        const paramValues = buildParamValues(paramNames, row, sourceName);
+        // REPLACE "sourceIndex" WITH "sourcIndex"
+        const updatedParamValues = paramValues.map((val, i) => {
+        // If the paramNames[i] is exactly "sourceIndex", use the string "sourcIndex" instead of the value
+          if (paramNames[i] === 'sourceIndex') {
+            return sourceName;
+          }
+          return val;
+        });
+  
+        //console.log(`Row #${rowIndex} =>`, paramNames, updatedParamValues);
+        const result = window.financial.functions[functionName].implementation(...updatedParamValues);
+        row[functionName] = result || 0;
+      });
+
     });
   }
 
@@ -742,6 +910,49 @@ function yearToDateFactor(fieldName) {
   return factor;
 } 
 
+function uniqueValues(values) {
+  const uniqueSet = new Set(values);
+  return uniqueSet.size;
+}
+
+function createProbabilityArray(mode, unique, uniqueArray) {
+  //unique is quantity of unique values in a column, and uniqueArray contains all unique values
+  /* Convexity in Risk Model applied here refers to the situation where the rate of probability becomes steeper as the value increases. 
+  In other words, the relationship between value and probability is convex, 
+  meaning that beyond the mode (value that appears most frequently in a data set which is the tipping point) small increases in value can lead to disproportionately large increases in the likelihood of an event (i.e., a loss).
+  */
+  mode = parseInt(mode);
+  if (!Number.isInteger(mode) || mode < 0 || mode >= unique || uniqueArray.length !== unique) {
+    throw new Error("Invalid input: mode must be within bounds and uniqueArray must match unique count");
+  }
+
+  // Function to interpolate between two values over a number of steps
+  function interpolate(startValue, endValue, steps) {
+      const stepValue = (endValue - startValue) / (steps - 1);  
+      const values = [];
+      for (let i = 0; i < steps; i++) {
+          values.push(startValue + i * stepValue);
+      }
+      return values;
+  }
+  // Generate arrays with the specified unique size
+  let probabilityArray = [];
+  // Interpolate between probabilityArray[0] and probabilityArray[median-1]
+  const firstSegment = interpolate(0, 1, mode);
+  // Interpolate between probabilityArray[median] and probabilityArray[unique-1]
+  const secondSegment = interpolate(5, 100, unique - mode);
+  console.log(`median: ${mode}, unique: ${unique}, firstSegment: ${firstSegment}, secondSegment : ${secondSegment}`)
+
+  // Assign values to the first probability array
+  for (let i = 0; i < firstSegment.length; i++) {
+      probabilityArray[`'${uniqueArray[i]}'`] = parseFloat(firstSegment[i].toFixed(2));
+  }
+  for (let i = 0; i < secondSegment.length; i++) {
+      probabilityArray[`'${uniqueArray[mode + i]}'`] = parseFloat(secondSegment[i].toFixed(2));
+  }
+  return probabilityArray;
+}
+
 function computeStatistics(data) { 
   const numericColumns = {};
   data.forEach(item => {
@@ -762,18 +973,36 @@ function computeStatistics(data) {
     // Population variance: average of squared differences from the mean.
     const variance = vals.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / count;
     const stdDeviation = Math.sqrt(variance);
+
+    // Sort to compute median
+    vals.sort((a, b) => a - b);
+    let median;
+    const mid = Math.floor(count / 2);
+    if (count % 2 !== 0) {
+      // Odd length: middle element is the median
+      median = vals[mid];
+    } else {
+      // Even length: average of the two middle elements
+      median = (vals[mid - 1] + vals[mid]) / 2;
+    }
     
     results[col] = {
       min: Math.min(...vals),
       max: Math.max(...vals),
       mean: mean,
+      median: median,
       count: count,
       variance: variance,
       stdDeviation: stdDeviation,
       twoStdDeviations: [mean - 2 * stdDeviation, mean + 2 * stdDeviation],
-      threeStdDeviations: [mean - 3 * stdDeviation, mean + 3 * stdDeviation]
+      threeStdDeviations: [mean - 3 * stdDeviation, mean + 3 * stdDeviation],
+      uniqueCount: uniqueValues(vals) 
     };
     results[col].YTDfactor = yearToDateFactor(col);
+    if (results[col].unique > 4 && results[col].unique <= 16  && parseInt(results[col].mode) < results[col].unique-1 ) {
+      results[col].uniqueArray = [...new Set(vals)];
+      results[col].convexProbability = createProbabilityArray(results[col].mode, results[col].unique, results[col].uniqueArray);
+    }
   });
   return results;
 }
