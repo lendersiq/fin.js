@@ -309,7 +309,7 @@ window.financial = {
     checkingProfit: {
       description: "Calculates the profit of checking accounts",
       implementation: function(portfolio, balance, interest=null, rate=null, charges=null, waived=null, open, deposits=null, withdrawals=null, sourceIndex) {
-        if (balance === 0) return 0;
+        if (!balance) return 0;
         //const sourceIndex = 'checking';
         const creditRate = financial.functions.calculateFtpRate.implementation(12, sourceIndex);
         const creditForFunding = creditRate * balance * (1 - financial.attributes.ddaReserveRequired.value);
@@ -354,7 +354,7 @@ window.financial = {
     loanProfit: {
       description: "Calculates the profit of a variety of loans",
       implementation: function(portfolio, principal, rate, risk, open, payment = null, fees = null, maturity = null, term = null, sourceIndex) {
-        if (principal === 0) return 0; // zero principal implies closed loan, so return 0 profit
+        //if (!principal) return 0; // zero principal implies closed loan, so return 0 profit
         const {monthsUntilMaturity, yearsUntilMaturity} = financial.functions.untilMaturity.implementation(maturity);
         const monthlyRate = rate < 1 ? parseFloat(rate) / 12 : parseFloat(rate / 100) / 12;
         const monthlyPayment = (principal * (monthlyRate / (1 - Math.pow(1 + monthlyRate, -monthsUntilMaturity)))).toFixed(2);
