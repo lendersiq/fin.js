@@ -198,7 +198,6 @@
           // Once all CSVs are loaded, combine
           combineData();
           // Then apply formulas
-          //applyFunctionsAndFormulas();
           applyFormulas();
           // Finally build the table
           buildTable();
@@ -218,28 +217,6 @@
   modal.appendChild(modalContent)
   modalBackdrop.appendChild(modal);
   document.body.appendChild(modalBackdrop);
-
-  // --- CSV parser ---
-  function parseCSV(csvString) {
-    const lines = csvString
-      .split("\n")
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
-
-    if (lines.length === 0) return [];
-
-    const headers = lines[0].split(",").map(h => h.trim());
-    const dataRows = lines.slice(1);
-
-    return dataRows.map(row => {
-      const values = row.split(",");
-      const obj = {};
-      headers.forEach((header, idx) => {
-        obj[header] = values[idx] ? values[idx].trim() : "";
-      });
-      return obj;
-    });
-  }
 
   // Example formatValue function for display
   const currencyFormatter = new Intl.NumberFormat("en-US", {
@@ -532,6 +509,7 @@
     const formulaCols  = appConfig.filter(c => c.column_type === "formula");
 
     // For each unique entry in combinedData, apply these columns
+    console.log('window.combinedData', window.combinedData)
     const allKeys = Object.keys(window.combinedData);
     allKeys.forEach(key => {
       const entry = window.combinedData[key];
@@ -548,7 +526,7 @@
       entry.totals = computeAggregates(entry.subRows);
 
       // Then also apply formula to the newly updated totals
-      applyFormulaCols(entry.totals, formulaCols);
+      //applyFormulaCols(entry.totals, formulaCols);
     });
 
     window.statistics['filtered'] = window.statistics['filtered'] || {};
@@ -556,6 +534,37 @@
     window.statistics['filtered'].unique = uniqueCount;
     console.log("Applied to formulas:", window.combinedData);
   }
+
+  function applyFormulaCols(row, formulaCols) {
+    formulaCols.forEach(col => {
+        const expr = col.formula || "";
+        let result;
+        try {
+            // Extract variable names from the formula (e.g., "checkingProfit + loanProfit" -> ["checkingProfit", "loanProfit"])
+            const variables = expr.match(/[a-zA-Z_]\w*/g) || [];
+            
+            // Create a safe evaluation context with defaults
+            const safeRow = { ...row }; // Shallow copy of row
+            variables.forEach(varName => {
+                if (!(varName in safeRow) || safeRow[varName] === null || safeRow[varName] === undefined) {
+                    safeRow[varName] = 0; // Default to 0 for missing or null/undefined values
+                }
+            });
+
+            // Evaluate the expression with the safe context
+            with(safeRow) {
+                result = eval(expr);
+            }
+
+            // Validate result is a number
+            result = (typeof result === 'number' && !isNaN(result)) ? result : null;
+        } catch (err) {
+            console.error(`Error evaluating formula "${expr}" for row:`, row, err);
+            result = null;
+        }
+        row[col.id] = result; // e.g., row["profit"]
+    });
+}
 
   // Regex patterns for date detection (YYYY-MM-DD or YYYY/MM/DD)
   const isoDateRegexDash = /^\d{4}-\d{2}-\d{2}$/;
@@ -637,18 +646,6 @@
     });
   }
 
-  /*
-  function getParamNames(func) {
-    const STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/gm;
-    const ARGUMENT_NAMES = /([^\s,]+)/g;
-    const fnStr = func.toString().replace(STRIP_COMMENTS, '');
-    const result = fnStr
-      .slice(fnStr.indexOf('(') + 1, fnStr.indexOf(')'))
-      .match(ARGUMENT_NAMES);
-    return result || [];
-  }
-  */
-
   function getFunctionParameters(func) {
     // Convert function to string and extract the parameter portion
     const funcStr = func.toString();
@@ -673,7 +670,10 @@
   }
 
   function applyFunctions(sourceName) {
-    const functionCols = appConfig.filter(c => c.column_type === "function");
+    // Filter function columns where source_name matches the provided sourceName
+    const functionCols = appConfig.filter(c => 
+      c.column_type === "function" && c.source_name === sourceName
+    );
     functionCols.forEach(col => {
       const functionName = col.function || "";
       if (
@@ -710,28 +710,12 @@
     });
   }
 
-  function applyFormulaCols(row, formulaCols) {
-    formulaCols.forEach(col => {
-      const expr = col.formula || "";
-      let result;
-      try {
-        // Bring row fields into scope
-        with(row) {
-          result = eval(expr);
-        }
-      } catch (err) {
-        console.error(`Error evaluating formula "${expr}":`, err);
-        result = null;
-      }
-      row[col.id] = result;
-    });
-  }
-
   // 11) Build the final table with aggregated totals + sub-rows
   function buildTable() {
     const tableContainer = document.createElement("div");
     const table = document.createElement("table");
     table.className = "table";
+    table.id = "mainTable";
 
     // Table header
     const thead = document.createElement("thead");
@@ -742,9 +726,17 @@
       ["data", "function", "formula"].includes(c.column_type)
     );
 
-    displayCols.forEach(col => {
+    displayCols.forEach((col, colIndex) => {
       const th = document.createElement("th");
-      th.innerText = col.heading;
+      if (col.data_type.toLowerCase() === 'unique') {
+        const mashUpButton = document.createElement('button');
+        mashUpButton.textContent = col.heading
+        mashUpButton.className = 'button';
+        mashUpButton.addEventListener('click', () => handleGroupIdButtonClick(colIndex));
+        th.appendChild(mashUpButton);
+      } else {
+        th.innerText = col.heading;
+      }
       headerRow.appendChild(th);
     });
     thead.appendChild(headerRow);
@@ -752,15 +744,40 @@
 
     // Table body
     const tbody = document.createElement("tbody");
-    const combinedKeys = Object.keys(window.combinedData);
+    // Get all keys from combinedData
+    let combinedKeys = Object.keys(window.combinedData);
+    
+    // Find all columns with sort configuration
+    const sortConfigs = appConfig.filter(col => col.sort);
+    
+    if (sortConfigs.length > 0) {
+      combinedKeys.sort((a, b) => {
+        // Iterate through each sort configuration in order
+        for (const config of sortConfigs) {
+          const sortKey = config.id; 
+          const sortDirection = config.sort; // "asc" or "desc"
+            
+          // Get values from totals (assuming numeric sorting)
+          const valueA = parseFloat(window.combinedData[a].totals[sortKey]);
+          const valueB = parseFloat(window.combinedData[b].totals[sortKey]);
+          
+          // Compare values
+          if (valueA !== valueB) { // If values differ, return the comparison result
+            return sortDirection.toLowerCase() === "asc" ? valueA - valueB : valueB - valueA;
+          }
+          // If equal, continue to next sort column
+        }
+        return 0; // All sort columns are equal
+      });
+    }
 
+    // Use combinedKeys (sorted or unsorted) for the table rows
     combinedKeys.forEach(uniqueVal => {
       const entry = window.combinedData[uniqueVal];
-      if (!entry) return; // filtered out?
+      if (!entry) return;
 
       const { subRows, totals } = entry;
 
-      // Build "totals" row (the aggregated row for this uniqueVal)
       const totalsRow = document.createElement("tr");
       if (subRows.length > 1) {
         totalsRow.classList.add("groupHeadRow");
@@ -777,7 +794,6 @@
 
       tbody.appendChild(totalsRow);
 
-      // If multiple sub-rows, create hidden child rows
       if (subRows.length > 1) {
         subRows.forEach(sRow => {
           const subTr = document.createElement("tr");
@@ -790,7 +806,6 @@
             subTd.innerText = formatValue(rawValue, col.data_type);
             subTr.appendChild(subTd);
           });
-
           tbody.appendChild(subTr);
         });
       }
@@ -941,7 +956,7 @@ function createProbabilityArray(mode, unique, uniqueArray) {
   const firstSegment = interpolate(0, 1, mode);
   // Interpolate between probabilityArray[median] and probabilityArray[unique-1]
   const secondSegment = interpolate(5, 100, unique - mode);
-  console.log(`median: ${mode}, unique: ${unique}, firstSegment: ${firstSegment}, secondSegment : ${secondSegment}`)
+  console.log(`mode: ${mode}, unique: ${unique}, firstSegment: ${firstSegment}, secondSegment : ${secondSegment}`)
 
   // Assign values to the first probability array
   for (let i = 0; i < firstSegment.length; i++) {
@@ -985,12 +1000,27 @@ function computeStatistics(data) {
       // Even length: average of the two middle elements
       median = (vals[mid - 1] + vals[mid]) / 2;
     }
+
+    // Calculate mode
+    const frequencyMap = {};
+    vals.forEach(val => {
+      frequencyMap[val] = (frequencyMap[val] || 0) + 1;
+    });
+    let mode = null;
+    let maxFrequency = 0;
+    Object.entries(frequencyMap).forEach(([val, freq]) => {
+      if (freq > maxFrequency) {
+        mode = parseFloat(val); // Convert back to number
+        maxFrequency = freq;
+      }
+    });
     
     results[col] = {
       min: Math.min(...vals),
       max: Math.max(...vals),
       mean: mean,
       median: median,
+      mode: mode,
       count: count,
       variance: variance,
       stdDeviation: stdDeviation,
@@ -999,12 +1029,97 @@ function computeStatistics(data) {
       uniqueCount: uniqueValues(vals) 
     };
     results[col].YTDfactor = yearToDateFactor(col);
-    if (results[col].unique > 4 && results[col].unique <= 16  && parseInt(results[col].mode) < results[col].unique-1 ) {
+    
+    // constrain risk scores to a reasonable set
+    if (results[col].uniqueCount > 2 && results[col].uniqueCount <= 100 && parseInt(results[col].mode) < results[col].uniqueCount-1 ) {
       results[col].uniqueArray = [...new Set(vals)];
-      results[col].convexProbability = createProbabilityArray(results[col].mode, results[col].unique, results[col].uniqueArray);
+      results[col].convexProbability = createProbabilityArray(results[col].mode, results[col].uniqueCount, results[col].uniqueArray);
     }
   });
   return results;
+}
+
+// --- CSV parser ---
+function parseCSV(csvString) {
+  const lines = csvString
+    .split("\n")
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  if (lines.length === 0) return [];
+
+  const headers = lines[0].split(",").map(h => h.trim());
+  const dataRows = lines.slice(1);
+
+  return dataRows.map(row => {
+    const values = row.split(",");
+    const obj = {};
+    headers.forEach((header, idx) => {
+      obj[header] = values[idx] ? values[idx].trim() : "";
+    });
+    return obj;
+  });
+}
+
+function handleGroupIdButtonClick(colIndex) {
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.csv';
+  fileInput.style.display = 'none';
+
+  fileInput.addEventListener("change", evt => {
+    const file = evt.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      const csvContent = e.target.result;
+      const data = parseCSV(csvContent);
+      const mapping = createUniqueIdMapping(data);
+      replaceFirstColumnWithMapping('mainTable', mapping, colIndex);
+    }
+    reader.readAsText(file);
+  });
+
+  document.body.appendChild(fileInput);
+  fileInput.click();
+  document.body.removeChild(fileInput);
+}
+
+// Function to create a mapping of unique IDs from CSV data
+function createUniqueIdMapping(data) {
+  const mapping = {};
+  data.forEach(row => {
+    const values = Object.values(row);
+    if (values) {
+      mapping[values[0].toString().replace(/'/g, '')] = values[1].toString().replace(/'/g, '');
+    }
+  });
+  return mapping;
+}
+
+function replaceFirstColumnWithMapping(tableId, mapping, colIndex) {
+  // Get all table rows from the specified table
+  const rows = document.querySelectorAll(`#${tableId} tr`);
+  
+  // Loop through each row
+  rows.forEach(row => {
+    // Get all <td> elements in this row
+    const cells = row.querySelectorAll('td');
+    // Check if the specified column index exists
+    if (cells.length <= colIndex || colIndex < 0) return; // Skip if column is out of bounds
+    
+    // Get the cell at the specified column index
+    const targetCell = cells[colIndex];
+    // Get the current value in that cell (e.g., "200106555")
+    const currentId = targetCell.textContent.trim();
+    
+    // Check if this ID exists in the mapping
+    if (mapping[currentId]) {
+      // Replace the cell's content with the mapped value
+      targetCell.textContent = mapping[currentId];
+    }
+  });
 }
 
 function renderFavicon() {
