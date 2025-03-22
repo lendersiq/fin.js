@@ -1,68 +1,341 @@
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
+    font-family: 'Arial', sans-serif;
     color: #333;
+    background-color: #f5f7fa;
+    line-height: 1.6;
+    overflow-y: hidden;
 }
 
-/* Table Container */
+.app-container {
+    display: flex;
+    min-height: 100vh;
+    height: 100vh; /* Ensure it fits the viewport */
+    overflow: hidden; /* Contain overflow within container */
+}
+
+.sidebar {
+    width: 80px; /* Reduced width for vertical text */
+    background: linear-gradient(180deg, rgba(11, 96, 49, 0.9), rgba(11, 76, 39, 0.9));
+    color: #fff;
+    padding: 20px 0;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.sidebar-header {
+    padding: 20px 0;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    width: 100%;
+}
+.sidebar-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    transform: rotate(-90deg); /* Rotate logo */
+    white-space: nowrap;
+}
+.nav-list {
+    list-style: none;
+    padding: 0;
+    margin: 40px 0 0; /* Increased top margin for spacing */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-grow: 1;
+}
+.nav-item {
+    padding: 30px 0; /* Adjusted padding for vertical layout */
+    transition: background-color 0.3s ease;
+    width: 100%;
+    text-align: center;
+}
+.nav-item a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.1rem;
+    font-weight: 500;
+    display: block;
+    transform: rotate(-90deg); /* Rotate text 90 degrees counterclockwise */
+    white-space: nowrap; /* Prevent text wrapping */
+}
+.nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+.nav-item.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-left: 4px solid #fff; /* Still visible on left */
+}
+.content {
+    margin-left: 80px; /* Adjusted for slimmer sidebar */
+    flex-grow: 1;
+    padding: 20px;
+}
 .table-container {
-    width: calc(100% - 40px); /* Adjusted for left and right margins */
+    width: calc(100% - 40px);
+    max-width: 1200px;
+    margin: 1rem auto 4.5rem;
     overflow-y: auto;
-    height: calc(100vh - 50px); /* Adjusted to account for the footer and margins */
-    border: 1px solid #ddd;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    border-radius: 5px;
-    /* top | left and right | bottom */
-    margin: 0.5em auto 4.5em;
-    background-color: white;
+    height: calc(100vh - 100px);
+    border: 1px solid rgba(11, 96, 49, 0.2);
+    box-shadow: 0 4px 20px rgba(11, 96, 49, 0.1);
+    border-radius: 8px;
+    background-color: #fff;
 }
-
+.section {
+    width: calc(100% - 40px);
+    max-width: 1200px;
+    margin: 1rem auto 4.5rem;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(11, 96, 49, 0.1);
+}
 table {
     width: 100%;
     border-collapse: collapse;
-    font-family: Arial, sans-serif;
+    font-family: 'Arial', sans-serif;
+    font-size: 14px;
 }
-
 th, td {
-    border: 1px solid #ddd;
-    padding: 12px;
+    border: 1px solid rgba(11, 96, 49, 0.15);
+    padding: 12px 16px;
     text-align: left;
+    vertical-align: middle;
 }
-
 th {
-    background-color: rgba(11, 50, 96);
-    color: white;
+    background: linear-gradient(135deg, rgba(11, 96, 49, 0.9), rgba(11, 76, 39, 0.9));
+    color: #fff;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
+    font-weight: 600;
     position: sticky;
     top: 0;
     z-index: 2;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-
 tr:hover {
-    background-color: #EAEFFD;
+    background-color: rgba(11, 96, 49, 0.05);
+    transition: background-color 0.2s ease;
 }
-
 td {
     transition: background-color 0.3s;
 }
-
 .groupHeadRow {
-    background-color: rgba(35, 100, 65, 1);
-    color: white;
+    background-color: rgba(11, 96, 49, 0.8);
+    color: #fff;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
 }
-
 .groupHeadRow:hover {
-    background-color: rgba(95, 160, 125, 1);
+    background-color: rgba(11, 76, 39, 1);
 }
-
 .groupRow {
-    background-color: rgba(75, 140, 105, 1);
-    color: white;
+    background-color: rgba(11, 96, 49, 0.3);
+    color: #333;
+    font-weight: 400;
+}
+.groupRow:hover {
+    background-color: rgba(11, 96, 49, 0.4);
+}
+.button {
+    background: linear-gradient(135deg, rgba(11, 96, 49, 0.9), rgba(11, 76, 39, 0.9));
+    color: #fff;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.button:hover {
+    background: linear-gradient(135deg, rgba(11, 76, 39, 1), rgba(11, 56, 29, 1));
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+.button:disabled {
+    background: rgba(11, 96, 49, 0.4);
+    color: #ccc;
+    opacity: 1;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+tr:last-child {
+    background-color: rgba(11, 96, 49, 0.1);
+    font-weight: 600;
+    border-top: 2px solid rgba(11, 96, 49, 0.5);
+}
+@media (max-width: 768px) {
+    .sidebar { width: 60px; } /* Slimmer on smaller screens */
+    .content { margin-left: 60px; }
+    .table-container, .section { width: calc(100% - 20px); margin: 0.5rem auto 3rem; }
+    th, td { padding: 8px 10px; font-size: 12px; }
+    .button { padding: 6px 8px; font-size: 12px; }
+    .sidebar-header h2 { font-size: 1.2rem; }
+    .nav-item a { font-size: 1rem; }
+}
+@media (max-width: 480px) {
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        padding: 10px 0;
+        flex-direction: row; /* Horizontal layout on mobile */
+        justify-content: space-between;
+    }
+    .sidebar-header h2 {
+        transform: none; /* No rotation on mobile */
+        font-size: 1.2rem;
+    }
+    .nav-list {
+        flex-direction: row;
+        margin: 0;
+        justify-content: space-around;
+        width: auto;
+    }
+    .nav-item {
+        padding: 10px;
+    }
+    .nav-item a {
+        transform: none; /* No rotation on mobile */
+        font-size: 1rem;
+    }
+    .content {
+        margin-left: 0;
+    }
 }
 
-.groupRow:hover {
-    background-color: rgba(95, 160, 125, 1);
+/* Chart Config Container */
+.chart-config {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 30px; /* Slightly more spacing for breathing room */
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 10px 15px;
+    background: rgba(245, 247, 250, 0.8); /* Subtle off-white background */
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); /* Soft shadow for depth */
+}
+
+/* Style for Selects */
+.chart-config select {
+    background: #fff; /* Clean white base */
+    color: #2A2E35; /* Charcoal gray for elegance */
+    padding: 10px 35px 10px 10px; /* Space for arrow */
+    font-size: 14px;
+    font-weight: 400; /* Lighter weight for sophistication */
+    font-family: 'Arial', sans-serif; /* Clean, modern font */
+    border: none;
+    border-bottom: 2px solid #0b6031; /* Thin green underline */
+    border-radius: 0; /* Sharp edges for modernity */
+    cursor: pointer;
+    transition: border-color 0.3s ease, transform 0.2s ease;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    position: relative;
+    outline: none; /* Remove default focus outline */
+}
+
+/* Animated Underline on Hover/Focus */
+.chart-config select:hover,
+.chart-config select:focus {
+    border-color: #B49C46; /* Gold underline on interaction */
+    transform: translateY(-2px); /* Slight lift for dynamism */
+}
+
+/* Elegant Animated Arrow */
+.chart-config select {
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%230b6031" height="14" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+}
+.chart-config select:hover {
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%23B49C46" height="14" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>'); /* Gold arrow on hover */
+    animation: pulseArrow 1.5s infinite; /* Subtle pulse */
+}
+
+/* Pulse Animation for Arrow */
+@keyframes pulseArrow {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+/* Render Chart Button with Complementary Gold Color */
+#render-chart {
+    background: linear-gradient(135deg, #B49C46, #8F7C36); /* Gold gradient */
+    color: #fff;
+    padding: 8px 12px; /* Matches .button */
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Hover Effect for Render Chart Button */
+#render-chart:hover {
+    background: linear-gradient(135deg, #8F7C36, #6B5C27); /* Darker gold gradient */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Ensure button inherits base styles if needed */
+.render-button {
+    background: linear-gradient(135deg, rgba(11, 96, 49, 0.9), rgba(11, 76, 39, 0.9));
+    color: #fff;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.render-button:hover {
+    background: linear-gradient(135deg, rgba(11, 76, 39, 1), rgba(11, 56, 29, 1));
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .chart-config {
+        gap: 15px; /* Slightly reduced spacing for medium screens */
+    }
+    .chart-config select, #render-chart {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .chart-config {
+        gap: 10px; /* Further reduced for small screens */
+        flex-direction: column; /* Stack vertically on mobile */
+        align-items: stretch; /* Full width for each item */
+    }
+    .chart-config select, #render-chart {
+        width: 100%; /* Full width on mobile */
+    }
 }
 
 .modal-header {
@@ -124,25 +397,262 @@ td {
     display: none;
 }
 
-.button {
-    background-color: #B49C46;
-    color: white;
-    padding: 6px 8px;
-    border: none;
-    border-radius: 4px;
+/* 
+fiCharts.css
+Styles for the enhanced bar & pie charts.
+Adjust any sizing, colors, fonts, or transitions to suit your design.
+*/
+
+/* --- BAR CHART --- */
+/*
+  - Horizontal scrolling if needed (overflow-x: auto).
+  - No vertical scrollbar (overflow-y: hidden) so the chart is stable in height.
+*/
+.bar-chart-wrap {
+    position: relative;
+    width: 90%;
+    height: 600px;
+    font-family: sans-serif;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  /* 
+   Inner container that we set to the total needed width in JS.
+   This ensures the axis lines + bars share the same coordinate system
+   and scroll together.
+*/
+.bar-chart-inner-wrap {
+    position: relative;
+    width: 100%;  /* Will be overridden in JS to something bigger if needed */
+    height: 100%; 
+}
+  
+  /*
+    The container for axis lines & labels, 
+    stopping 50px above the bottom to leave space for bar labels.
+  */
+  .bar-chart-axis-container {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    /* Increased from 30px to 50px to ensure labels are not clipped */
+    bottom: 50px;
+    pointer-events: none; 
+  }
+  
+  .bar-chart-axis-line {
+    position: absolute;
+    width: 100%;
+    border-top: 1px solid #ccc;
+    box-sizing: border-box;
+  }
+  
+  .bar-chart-axis-label {
+    position: absolute;
+    left: 0;
+    top: -10px;
+    font-size: 0.75rem;
+    background: #fff;
+    padding: 0 4px;
+  }
+  
+  /*
+    The container for bars, also ending 50px from the bottom.
+    We'll set its width via JS if the chart is wide.
+  */
+  .bar-chart-container {
+    position: absolute;
+    left: 50px;   /* space for axis labels */
+    right: 20px;  /* some padding on the right */
+    top: 0;
+    bottom: 50px;
+  }
+  
+  /* Bars are placed absolutely inside .bar-chart-container. */
+  .bar {
+    position: absolute;
+    bottom: 0; 
+    transition: height 0.4s ease;
     cursor: pointer;
+  }
+  
+  /* Rounded corners: top corners for positive, bottom corners for negative. */
+  .positive-bar {
+    border-radius: 4px 4px 0 0;
+  }
+  
+  .negative-bar {
+    border-radius: 0 0 4px 4px;
+  }
+  
+  /*
+    The label is placed 20px below the bar's bottom. 
+    Now that the container bottom is 50px from the chart bottom, 
+    there's sufficient space for these labels.
+  */
+  .bar-label {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+  
+  /* Tooltip on hover */
+  .bar-tooltip {
+    position: absolute;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 100;
+  }
+
+   
+  /* --- PIE CHART --- */
+  .pie-chart {
+    position: relative;
+    width: 600px;
+    height: 600px;
+    margin: 0 auto;
+    border-radius: 50%;
+    overflow: hidden; /* ensures conic-gradient fits the circle */
+  }
+  
+  /* Pie labels that appear around the pie */
+  .pie-label {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    font-size: 0.75rem;
+    background: #fff;
+    padding: 2px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  
+  /* Legend for the pie chart */
+  .pie-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 1rem;
+    justify-content: center;
+    font-family: sans-serif;
+  }
+  
+  .pie-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .pie-legend-color-box {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+
+/* Statistics Section */
+#statistics-section {
+    padding: 0;
+    max-height: 80vh; /* Limit height to 80% of viewport */
+    overflow-y: auto; 
+    overflow-x: hidden;
+}
+
+/* Statistics Section */
+#statistics-section {
+    padding: 0;
+}
+
+/* Stats Container */
+.stats-container {
+    padding: 15px;
+    background: rgba(245, 247, 250, 0.8);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Stats Category */
+.stats-category {
+    margin-bottom: 20px;
+}
+
+/* Stats Header */
+.stats-header {
+    margin: 0;
+    padding: 10px 15px;
+    font-size: 18px;
+    font-weight: 500;
+    color: #2A2E35;
+    background: #fff;
+    border-bottom: 2px solid #0b6031;
+    border-radius: 0;
+    cursor: pointer;
+    transition: border-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+}
+.stats-header:hover {
+    border-color: #B49C46;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(180, 156, 70, 0.2);
+}
+
+/* Stats Content */
+.stats-content {
+    padding: 10px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+/* Stats Card */
+.stats-card {
+    background: #fff;
+    padding: 15px;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    flex: 1 1 300px;
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+.stats-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(180, 156, 70, 0.2);
+}
+.stats-card h3 {
+    margin: 0 0 10px;
     font-size: 16px;
-    transition: background-color 0.3s ease;
-    margin-top: 10px;
+    font-weight: 500;
+    color: #0b6031;
+}
+.stats-card p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #2A2E35;
+}
+.stats-card strong {
+    color: #B49C46;
 }
 
-.button:hover {
-    background-color: #8F7C36; /* Even darker on hover for a nice effect */
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .stats-container { padding: 10px; }
+    .stats-header { font-size: 16px; padding: 8px 12px; }
+    .stats-content { gap: 15px; }
+    .stats-card { flex: 1 1 250px; padding: 12px; }
+    .stats-card h3 { font-size: 15px; }
+    .stats-card p { font-size: 13px; }
 }
-
-.button:disabled {
-    background-color: dimgrey;
-    color: linen;
-    opacity: 1;
-    cursor: not-allowed;
+@media (max-width: 480px) {
+    .stats-container { padding: 8px; }
+    .stats-content { flex-direction: column; gap: 10px; }
+    .stats-card { flex: 1 1 100%; }
 }
+  
