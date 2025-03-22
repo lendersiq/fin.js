@@ -26,11 +26,14 @@
   // Load scripts in the correct order
   loadScript("../../core/ai.js", () => {
     console.log("ai.js loaded");
-    loadScript("../../libraries/financial.js", () => {
-      console.log("libraries/financial.js loaded");
-       // function tests
-      console.log('Function Tests')
-      console.log ('Function parameter test: ', getFunctionParameters(window.financial.functions['loanProfit'].implementation));
+    loadScript("../../core/fiCharts.js", () => {
+      console.log("fiCharts.js loaded");
+      loadScript("../../libraries/financial.js", () => {
+        console.log("libraries/financial.js loaded");
+        // function tests
+        console.log('Function Tests')
+        console.log ('Function parameter test: ', getFunctionParameters(window.financial.functions['loanProfit'].implementation));
+      });
     });
   });
   renderFavicon();
@@ -199,8 +202,8 @@
           combineData();
           // Then apply formulas
           applyFormulas();
-          // Finally build the table
-          buildTable();
+          // Finally, render presentation
+          buildPresentation();
         }
       };
       reader.readAsText(file);
@@ -710,8 +713,117 @@
     });
   }
 
+  function buildPresentation() {
+    // Create the main container
+    const appContainer = document.createElement('div');
+    appContainer.className = 'app-container';
+
+    // Create sidebar
+    const sidebar = document.createElement('nav');
+    sidebar.className = 'sidebar';
+
+    // Create sidebar header
+    const sidebarHeader = document.createElement('div');
+    sidebarHeader.className = 'sidebar-header';
+    const headerTitle = document.createElement('h2');
+    headerTitle.textContent = 'FI.js';
+    sidebarHeader.appendChild(headerTitle);
+
+    // Create navigation list
+    const navList = document.createElement('ul');
+    navList.className = 'nav-list';
+
+    // Create navigation items
+    const navItems = [
+        { text: 'Table', section: 'table', active: true },
+        { text: 'Charts', section: 'charts', active: false },
+        { text: 'Statistics', section: 'statistics', active: false }
+    ];
+
+    // Store section elements for easy access
+    const sections = {};
+
+    navItems.forEach(item => {
+        const li = document.createElement('li');
+        li.className = `nav-item ${item.active ? 'active' : ''}`;
+        li.dataset.section = item.section;
+        
+        const link = document.createElement('a');
+        link.href = `#${item.section}`;
+        link.textContent = item.text;
+        
+        // Add click event listener
+        li.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default anchor behavior
+            
+            // Remove active class from all nav items
+            document.querySelectorAll('.nav-item').forEach(nav => {
+                nav.classList.remove('active');
+            });
+            
+            // Add active class to clicked item
+            li.classList.add('active');
+            
+            // Hide all sections
+            Object.values(sections).forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Show the selected section
+            const sectionId = `${item.section}-section`;
+            if (sections[sectionId]) {
+                sections[sectionId].style.display = 'block';
+            }
+        });
+        
+        li.appendChild(link);
+        navList.appendChild(li);
+    });
+
+    // Create main content
+    const main = document.createElement('main');
+    main.className = 'content';
+
+    // Create table container
+    const tableContainer = document.createElement('div');
+    tableContainer.className = 'table-container';
+    tableContainer.id = 'table-section';
+    sections['table-section'] = tableContainer;
+
+    // Create charts section
+    const chartsSection = document.createElement('div');
+    chartsSection.className = 'section';
+    chartsSection.id = 'charts-section';
+    chartsSection.style.display = 'none';
+    sections['charts-section'] = chartsSection;
+
+    // Create statistics section
+    const statsSection = document.createElement('div');
+    statsSection.className = 'section';
+    statsSection.id = 'statistics-section';
+    statsSection.style.display = 'none';
+    sections['statistics-section'] = statsSection;
+
+    // Assemble the structure
+    sidebar.appendChild(sidebarHeader);
+    sidebar.appendChild(navList);
+    appContainer.appendChild(sidebar);
+
+    main.appendChild(tableContainer);
+    main.appendChild(chartsSection);
+    main.appendChild(statsSection);
+    appContainer.appendChild(main);
+    
+    document.body.appendChild(appContainer);
+    
+    // Initial setup calls
+    buildTable('table-section');
+    buildCharts('charts-section');
+    buildStatsList('statistics-section');
+}
+
   // 11) Build the final table with aggregated totals + sub-rows
-  function buildTable() {
+  function buildTable(tableContainerID) {
     const tableContainer = document.createElement("div");
     const table = document.createElement("table");
     table.className = "table";
@@ -728,7 +840,7 @@
 
     displayCols.forEach((col, colIndex) => {
       const th = document.createElement("th");
-      if (col.data_type.toLowerCase() === 'unique') {
+      if (col.data_type.toLowerCase() === 'unique' || col.data_type.toLowerCase() === 'integer') {
         const mashUpButton = document.createElement('button');
         mashUpButton.textContent = col.heading
         mashUpButton.className = 'button';
@@ -838,7 +950,7 @@
     // Attach the table body
     table.appendChild(tbody);
     tableContainer.appendChild(table);
-    document.body.appendChild(tableContainer);
+    document.getElementById(tableContainerID).appendChild(tableContainer);
 
     // Toggle subrows on click
     table.addEventListener("click", e => {
@@ -850,6 +962,172 @@
         subTr.style.display = subTr.style.display === "none" ? "" : "none";
       });
     });
+  }
+
+  function buildCharts(chartsContainerID) {
+    // Create chart config container
+    const chartConfig = document.createElement('div');
+    chartConfig.className = 'chart-config';
+
+    // Create chart type select
+    const chartTypeSelect = document.createElement('select');
+    chartTypeSelect.id = 'chart-type';
+
+    // Create chart type options
+    const chartTypes = [
+        { value: 'bar', text: 'Bar Chart' },
+        { value: 'pie', text: 'Pie Chart' }
+    ];
+
+    chartTypes.forEach(type => {
+        const option = document.createElement('option');
+        option.value = type.value;
+        option.textContent = type.text;
+        chartTypeSelect.appendChild(option);
+    });
+
+    // Create x-axis select
+    const xAxisSelect = document.createElement('select');
+    xAxisSelect.id = 'x-axis';
+
+    // Create y-axis select
+    const yAxisSelect = document.createElement('select');
+    yAxisSelect.id = 'y-axis';
+
+    // Create render button
+    const renderButton = document.createElement('button');
+    renderButton.id = 'render-chart';
+    renderButton.className = 'render-button';
+    renderButton.textContent = 'Render Chart';
+
+    // Create chart container
+    const chartContainer = document.createElement('div');
+    chartContainer.className = 'chart-container';
+    chartContainer.id = 'chart-container';
+
+    // Create statistics section
+    const statsSection = document.createElement('div');
+    statsSection.className = 'section';
+    statsSection.id = 'statistics-section';
+    statsSection.style.display = 'none';
+
+    // Assemble chart config
+    chartConfig.appendChild(chartTypeSelect);
+    chartConfig.appendChild(xAxisSelect);
+    chartConfig.appendChild(yAxisSelect);
+    chartConfig.appendChild(renderButton);
+
+    // Assemble charts section
+    document.getElementById(chartsContainerID).appendChild(chartConfig);
+    document.getElementById(chartsContainerID).appendChild(chartContainer);
+
+    // Populate X-axis (integer) and Y-axis (currency/float) options
+    appConfig.forEach(col => {
+      if (col.data_type === 'integer') { // Include 'unique' if Portfolio is intended for X-axis
+        const option = document.createElement('option');
+        option.value = col.id; // Use 'id' for data reference
+        option.textContent = col.heading; // Use 'heading' for display
+        xAxisSelect.appendChild(option);
+      }
+      if (col.data_type === 'currency' || col.data_type === 'float') {
+        const option = document.createElement('option');
+        option.value = col.id;
+        option.textContent = col.heading;
+        yAxisSelect.appendChild(option);
+      }
+    });
+
+    // Render Chart
+    renderButton.addEventListener('click', () => {
+        const type = chartTypeSelect.value;
+        const xCol = xAxisSelect.value;
+        const yCol = yAxisSelect.value;
+
+        // Flatten subRows into a single array
+        const subRowsData = Object.values(window.combinedData).flatMap(group => group.subRows);
+
+        // Aggregate data (sum Y by unique X values)
+        const dataMap = {};
+        subRowsData.forEach(row => {
+            const xValue = row[xCol];
+            const yValue = parseFloat(row[yCol]);
+            if (!dataMap[xValue]) dataMap[xValue] = 0;
+            dataMap[xValue] += yValue;
+        });
+
+        const data = Object.entries(dataMap).map(([x, y]) => ({ x, y }));
+        chartContainer.innerHTML = ''; // Clear previous chart
+
+        if (type === 'bar') {
+            window.fiCharts.renderBarChart(data, chartContainer);
+        } else if (type === 'pie') {
+            window.fiCharts.renderPieChart(data, chartContainer);
+        }
+    });
+  }
+
+  function buildStatsList(statsContainerID) {
+      const statsSection = document.getElementById('statistics-section');
+      if (!statsSection || !window.statistics) return;
+      statsSection.innerHTML = '';
+  
+      const statsContainer = document.createElement('div');
+      statsContainer.className = 'stats-container';
+  
+      Object.entries(window.statistics).forEach(([category, data]) => {
+          const categoryDiv = document.createElement('div');
+          categoryDiv.className = 'stats-category';
+  
+          // Category Header
+          const header = document.createElement('h2');
+          header.className = 'stats-header';
+          header.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+          header.addEventListener('click', () => {
+              const content = categoryDiv.querySelector('.stats-content');
+              content.style.display = content.style.display === 'none' ? 'block' : 'none';
+          });
+  
+          // Category Content
+          const content = document.createElement('div');
+          content.className = 'stats-content';
+          content.style.display = 'none'; // Initially collapsed
+  
+          // Handle all data dynamically
+          if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+              Object.entries(data).forEach(([key, value]) => {
+                  const card = document.createElement('div');
+                  card.className = 'stats-card';
+  
+                  // Card Header
+                  const cardHeader = document.createElement('h3');
+                  cardHeader.textContent = key.replace(/_/g, ' ');
+                  card.appendChild(cardHeader);
+  
+                  // Render nested object or simple values
+                  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                      Object.entries(value).forEach(([statKey, statValue]) => {
+                          if (statValue !== null && statValue !== undefined && statKey !== 'convexProbability') {
+                              const p = document.createElement('p');
+                              p.innerHTML = `<strong>${statKey.replace(/_/g, ' ')}:</strong> ${formatValue(statValue)}`;
+                              card.appendChild(p);
+                          }
+                      });
+                  } else {
+                      const p = document.createElement('p');
+                      p.innerHTML = `<strong>Value:</strong> ${formatValue(value)}`;
+                      card.appendChild(p);
+                  }
+  
+                  content.appendChild(card);
+              });
+          }
+  
+          categoryDiv.appendChild(header);
+          categoryDiv.appendChild(content);
+          statsContainer.appendChild(categoryDiv);
+      });
+  
+      statsSection.appendChild(statsContainer);
   }
 })();
 
