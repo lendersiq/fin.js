@@ -33,6 +33,9 @@
         // function tests
         console.log('Function Tests')
         console.log ('Function parameter test: ', getFunctionParameters(window.financial.functions['loanProfit'].implementation));
+        const fn = createFilterFn('>= 730', 'date');
+        // Suppose you're around 2025-03-23 when you run this
+        console.log( fn('2023-03-24') );  // Expect: ???
       });
     });
   });
@@ -403,7 +406,7 @@
   
     const parsedFilters = filterConfigs.map(cfg => ({
       column: cfg.id,
-      fn: createFilterFn(cfg.filter, cfg.data_type)
+      fn: createFilterFn(cfg.filter, cfg.data_type) // > 2023-10-31, date
     }));
   
     // Rebuild rawData[sourceName] to include only rows that pass all filters
@@ -422,6 +425,7 @@
   }  
 
   // --- Apply any filters defined in appConfig ---
+  // used to apply to totals
   function applyFilters() {
     const filterConfigs = appConfig.filter(
       c => c.filter && c.column_type === "data"
@@ -453,42 +457,64 @@
   }
 
   function createFilterFn(filter, dataType) {
-    filter = filter.trim();
-
-    function convert(val) {
-      if (["integer","float","currency","rate"].includes(dataType)) {
-        const parsed = parseFloat(val);
-        return isNaN(parsed) ? val : parsed;
-      }
-      return val;
-    }
-
-    // Array syntax: [20,30]
+    console.log("filter,dataType", filter, dataType);
+    filter = (filter || "").trim();
+  
+    // Array Membership (Set Inclusion) Operator
+    // Check for array membership syntax like [10,20,30]
     if (/^\[.*\]$/.test(filter)) {
       let arr;
       try {
-        arr = JSON.parse(filter); // e.g. "[10,20]" => [10, 20]
+        arr = JSON.parse(filter); // e.g. "[10,20]" => [10,20]
       } catch (e) {
         console.error("Failed to parse array filter:", filter, e);
-        return () => true;
+        return () => true; // fallback: pass all
       }
       return (rawValue) => {
         const actual = convert(rawValue);
         return arr.includes(actual);
       };
     }
-
-    // Comparison: ==, !=, >, >=, <, <=
-    const comparison = /^(==|!=|>=|<=|>|<)\s*(.*)$/;
-    const match = filter.match(comparison);
+  
+    // Matches operators (==, !=, >=, <=, >, <) at the start,
+    // then any number of spaces, then the rest is the "right side"
+    const comparisonRegex = /^(==|!=|>=|<=|>|<)\s*(.*)$/;
+    const match = filter.match(comparisonRegex);
     if (match) {
-      const operator = match[1];
-      const rightStr = match[2].trim();
+      const operator = match[1];           // e.g. ">"
+      const rightStr = match[2].trim();    // e.g. "90" or "2023-10-31"
+  
       return (rawValue) => {
+        // leftVal: the row's actual data
         const leftVal = convert(rawValue);
-        const rightVal = convert(rightStr);
+  
+        // rightVal: interpret the filter string
+        let rightVal = rightStr;
+        if (dataType === "date") {
+          rightVal = parseDateOrOffset(rightStr);
+        } else if (["integer", "float", "currency", "rate"].includes(dataType)) {
+          const parsedNum = parseFloat(rightStr);
+          rightVal = isNaN(parsedNum) ? rightStr : parsedNum;
+        }
+  
+        // If leftVal AND rightVal are Date objects, compare by timestamp
+        if (leftVal instanceof Date && rightVal instanceof Date) {
+          const leftTime = leftVal.getTime();
+          const rightTime = rightVal.getTime();
+          switch (operator) {
+            case "==": return leftTime === rightTime;
+            case "!=": return leftTime !== rightTime;
+            case ">":  return leftTime >  rightTime;
+            case "<":  return leftTime <  rightTime;
+            case ">=": return leftTime >= rightTime;
+            case "<=": return leftTime <= rightTime;
+            default:   return true;
+          }
+        }
+  
+        // Otherwise, do a normal JS comparison for numbers/strings
         switch (operator) {
-          case "==": return leftVal == rightVal;
+          case "==": return leftVal == rightVal; 
           case "!=": return leftVal != rightVal;
           case ">":  return leftVal >  rightVal;
           case "<":  return leftVal <  rightVal;
@@ -498,11 +524,48 @@
         }
       };
     }
-
+  
+    // If we can’t parse it, return a no-op filter
     console.warn("Unrecognized filter:", filter);
     return () => true;
+  
+    // ----------------------
+    // Helper: handle row values for non-filter conversions
+    function convert(val) {
+      // e.g. your original numeric logic
+      if (["integer", "float", "currency", "rate"].includes(dataType)) {
+        const parsed = parseFloat(val);
+        return isNaN(parsed) ? val : parsed;
+      }
+  
+      // For date columns, if it’s already a Date or a parseable date string:
+      if (dataType === "date") {
+        const asDate = new Date(val);
+        return isNaN(asDate.getTime()) ? val : asDate;
+      }
+  
+      return val;
+    }
+  
+    // ----------------------
+    // Helper: parse the right-hand side of a date filter
+    // e.g. "90" => (today - 90 days), or "2023-10-31" => that date
+    function parseDateOrOffset(str) {
+      // 1) If it's an integer, interpret as offset from today
+      //    e.g. "90" => today - 90 days
+      const offset = parseInt(str, 10);
+      if (!isNaN(offset) && /^[+-]?\d+$/.test(str)) {
+        const d = new Date();
+        d.setDate(d.getDate() - offset);
+        return d;
+      }
+  
+      // 2) Otherwise try normal date parsing
+      const d = new Date(str);
+      return isNaN(d.getTime()) ? str : d;
+    }
   }
-
+  
   /*************************************************************
    *  APPLY FORMULA COLUMNS
    *************************************************************/
@@ -1234,7 +1297,7 @@ function createProbabilityArray(mode, unique, uniqueArray) {
   const firstSegment = interpolate(0, 1, mode);
   // Interpolate between probabilityArray[median] and probabilityArray[unique-1]
   const secondSegment = interpolate(5, 100, unique - mode);
-  console.log(`mode: ${mode}, unique: ${unique}, firstSegment: ${firstSegment}, secondSegment : ${secondSegment}`)
+  //console.log(`mode: ${mode}, unique: ${unique}, firstSegment: ${firstSegment}, secondSegment : ${secondSegment}`)
 
   // Assign values to the first probability array
   for (let i = 0; i < firstSegment.length; i++) {
