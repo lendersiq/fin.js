@@ -13,15 +13,15 @@
     document.head.appendChild(script);
   };
 
-  const asciiFIjs = `
-  FFFFFFF  IIIIIII         j    ssss
-  F           I            j   s    
-  FFFFFF      I            j    sss 
-  F           I     ..  j  j       s
-  F        IIIIIII  ..   jjj   ssss
-  `;
+  const asciiLucijs = `
+  L      u   u    cccc   i         j    ssss
+  L      u   u   c       i         j   s    
+  L      u   u   c       i         j    sss 
+  L      u   u   c       i  ..  j  j       s
+  LLLLL   uuu     cccc   i  ..   jjj   ssss
+`;
 
-  console.log(asciiFIjs);
+console.log(asciiLucijs);
 
   // Load scripts in the correct order
   loadScript("../../core/ai.js", () => {
@@ -100,7 +100,7 @@
   const modalHeader = document.createElement("div");
   modalHeader.classList.add("modal-header");
   const closeButton = document.createElement("button");
-  closeButton.classList.add("close-button")
+  closeButton.classList.add("close-button");
   closeButton.ariaLabel = "Close Modal";
   closeButton.innerHTML = "&times;";
   closeButton.addEventListener("click", () => {
@@ -111,24 +111,23 @@
   modal.appendChild(modalHeader);
   const modalContent = document.createElement("div");
   modalContent.classList.add("modal-content");
-  const modalHero = document.createElement('span');
-  modalHero.innerHTML = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 200 200">
-      <!-- Bottom rotated square -->
-      <g transform="rotate(45, 100, 100)">
-        <rect x="35" y="35" width="130" height="130" fill="#0b3260" opacity="0.75" />
-        <text x="100" y="135" font-family="Arial, sans-serif" font-size="90" fill="#ffffff" text-anchor="middle" >
-          JS
-        </text>
-      </g>
-      <!-- Top square -->
-      <g>
-        <rect x="35" y="35" width="130" height="130" fill="#0b6031" opacity="0.65" />
-        <text x="100" y="130" font-family="Arial, sans-serif" font-size="80" fill="#ffffff" text-anchor="middle">
-          FI
-        </text>
-      </g>
-    </svg>`;
+  const modalHero = document.createElement('div');
+  modalHero.classList.add("luci-logo");
+  const luciFrame = document.createElement("div");
+  luciFrame.classList.add("luci-frame");
+  const luciGrid = document.createElement("div");
+  luciGrid.classList.add("luci-grid");
+  const luciCell = document.createElement("span");
+  luciCell.classList.add("cell", "luci");
+  luciCell.innerHTML = "Luci";
+  const jsCell = document.createElement("span");
+  jsCell.classList.add("cell", "js");
+  jsCell.innerHTML = "js";
+  luciGrid.appendChild(luciCell);
+  luciGrid.appendChild(jsCell);
+  luciFrame.appendChild(luciGrid);
+  luciFrame.appendChild(luciGrid);
+  modalHero.appendChild(luciFrame);
   modalContent.appendChild(modalHero);
 
   const instructions = document.createElement('p');
@@ -789,7 +788,7 @@
     const sidebarHeader = document.createElement('div');
     sidebarHeader.className = 'sidebar-header';
     const headerTitle = document.createElement('h2');
-    headerTitle.textContent = 'FI.js';
+    headerTitle.textContent = 'Luci';
     sidebarHeader.appendChild(headerTitle);
 
     // Create navigation list
@@ -883,7 +882,7 @@
     buildTable('table-section');
     buildCharts('charts-section');
     buildStatsList('statistics-section');
-}
+  }
 
   // 11) Build the final table with aggregated totals + sub-rows
   function buildTable(tableContainerID) {
@@ -1464,42 +1463,10 @@ function replaceFirstColumnWithMapping(tableId, mapping, colIndex) {
 }
 
 function renderFavicon() {
-  const canvas = document.createElement('canvas'); 
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext('2d');
-
-  // Define the SVG as a string
-  const svg = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 200 200">
-    <!-- Bottom rotated square -->
-    <g transform="rotate(45, 100, 100)">
-      <rect x="35" y="35" width="130" height="130" fill="none" stroke="#007acc" stroke-width="4"/>
-    </g>
-    <!-- Top square -->
-    <g>
-      <rect x="35" y="35" width="130" height="130" fill="#4caf50" opacity="0.8" />
-      <text x="100" y="130" font-family="Arial, sans-serif" font-size="100" fill="#ffffff" text-anchor="middle">
-        FI
-      </text>
-    </g>
-  </svg>`;
-
-  // Create an image from the SVG
-  const img = new Image();
-  img.onload = function () {
-    // Draw the SVG onto the canvas
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-    // Generate the favicon
-    const faviconUrl = canvas.toDataURL('image/png');
-    let favicon = document.querySelector('link[rel="icon"]');
-    if (!favicon) {
-      favicon = document.createElement('link');
-      favicon.rel = 'icon';
-      document.head.appendChild(favicon);
-    }
-    favicon.href = faviconUrl;
-  };
-  img.src = `data:image/svg+xml;base64,${btoa(svg)}`;
+  const link = document.createElement('link');
+  link.rel = 'icon';
+  link.type = 'image/svg+xml';
+  link.href = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIGZpbGw9IiNGN0Y5RkIiLz4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ibHVjaUdyYWRpZW50IiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMCI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMwOTIwMzYiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjNTI4QUNDIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8IS0tIFJvdyAxIChjMSAtIGhpZ2hsaWdodCkgLS0+CiAgPHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiBmaWxsPSJ1cmwoI2x1Y2lHcmFkaWVudCkiIHN0cm9rZT0iIzE5MzI0RCIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgPHJlY3QgeD0iMTYiIHk9IjAiIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgZmlsbD0iI0ZGRkZGRiIgc3Ryb2tlPSIjRDhERUUzIiBzdHJva2Utd2lkdGg9IjEiLz4KICA8cmVjdCB4PSIzMiIgeT0iMCIgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiBmaWxsPSIjRkZGRkZGIiBzdHJva2U9IiNEOERFRTMiIHN0cm9rZS13aWR0aD0iMSIvPgogIDwhLS0gUm93IDIgKGM0IC0gaGlnaGxpZ2h0KSAtLT4KICA8cmVjdCB4PSIwIiB5PSIxNiIgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiBmaWxsPSJ1cmwoI2x1Y2lHcmFkaWVudCkiIHN0cm9rZT0iIzE5MzI0RCIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgPHJlY3QgeD0iMTYiIHk9IjE2IiB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIGZpbGw9IiNGRkZGRkYiIHN0cm9rZT0iI0Q4REVFMyIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgPHJlY3QgeD0iMzIiIHk9IjE2IiB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIGZpbGw9IiNGRkZGRkYiIHN0cm9rZT0iI0Q4REVFMyIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgPCEtLSBSb3cgMyAoYzcsIGM4IC0gaGlnaGxpZ2h0KSAtLT4KICA8cmVjdCB4PSIwIiB5PSIzMiIgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiBmaWxsPSJ1cmwoI2x1Y2lHcmFkaWVudCkiIHN0cm9rZT0iIzE5MzI0RCIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgPHJlY3QgeD0iMTYiIHk9IjMyIiB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIGZpbGw9InVybCgjbHVjaUdyYWRpZW50KSIgc3Ryb2tlPSIjMTkzMjREIiBzdHJva2Utd2lkdGg9IjEiLz4KICA8cmVjdCB4PSIzMiIgeT0iMzIiIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgZmlsbD0iI0ZGRkZGRiIgc3Ryb2tlPSIjRDhERUUzIiBzdHJva2Utd2lkdGg9IjEiLz4KPC9zdmc+';
+  document.head.appendChild(link);
 }
+
