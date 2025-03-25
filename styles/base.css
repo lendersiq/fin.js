@@ -1,22 +1,97 @@
+
+:root {
+    --luci-primary:   #19324D;       /* Frame & border accent */
+    --luci-gradient1: #092036;       /* Start of the gradient */
+    --luci-gradient2: #528ACC;       /* End of the gradient */
+    --luci-bg:        #FFFFFF;       /* Normal cell background */
+    --luci-muted:     #D8DEE3;       /* Grid border lines */
+    --page-bg:        #F7F9FB;       /* Page background */
+    --text-color:     #19324D;       /* Primary text color */
+}
+
 body {
     margin: 0;
     font-family: 'Arial', sans-serif;
-    color: #333;
-    background-color: #f5f7fa;
+    color: #333; /* Kept neutral */
+    background: var(--page-bg);
     line-height: 1.6;
     overflow-y: hidden;
+}
+
+.luci-logo {
+    position: relative;
+    display: inline-block;
+}
+
+  /* Outer Rectangular Frame */
+.luci-frame {
+    width: 8rem; /* Slightly larger for balance */
+    height: 3rem;
+    border: 0.2rem solid var(--luci-primary);
+    border-radius: 0.5rem; /* Slightly larger radius */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.luci-frame:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}
+
+.luci-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0.4rem;
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* Luci wider than .js */
+    gap: 0.25rem;
+}
+
+.cell {
+    background: var(--luci-bg);
+    border: 1px solid var(--luci-muted);
+    border-radius: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-color);
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+
+.cell.luci {
+    background: linear-gradient(to right, var(--luci-gradient1), var(--luci-gradient2));
+    color: #fff;
+}
+
+
+.cell.js {
+    background: var(--luci-bg);
+    color: var(--luci-gradient2);
+}
+
+.cell:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(to right, var(--luci-gradient2), var(--luci-primary));
+    color: #fff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 .app-container {
     display: flex;
     min-height: 100vh;
-    height: 100vh; /* Ensure it fits the viewport */
-    overflow: hidden; /* Contain overflow within container */
+    height: 100vh;
+    overflow: hidden;
 }
 
 .sidebar {
-    width: 80px; /* Reduced width for vertical text */
-    background: linear-gradient(180deg, rgba(11, 96, 49, 0.9), rgba(11, 76, 39, 0.9));
+    width: 80px;
+    background: linear-gradient(180deg, var(--luci-primary), var(--luci-gradient1));
     color: #fff;
     padding: 20px 0;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
@@ -28,90 +103,103 @@ body {
     flex-direction: column;
     align-items: center;
 }
+
 .sidebar-header {
     padding: 20px 0;
     text-align: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     width: 100%;
 }
+
 .sidebar-header h2 {
     margin: 0;
     font-size: 1.5rem;
     font-weight: 600;
     letter-spacing: 0.05em;
-    transform: rotate(-90deg); /* Rotate logo */
+    transform: rotate(-90deg);
     white-space: nowrap;
 }
+
 .nav-list {
     list-style: none;
     padding: 0;
-    margin: 40px 0 0; /* Increased top margin for spacing */
+    margin: 40px 0 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     flex-grow: 1;
 }
+
 .nav-item {
-    padding: 30px 0; /* Adjusted padding for vertical layout */
+    padding: 30px 0;
     transition: background-color 0.3s ease;
     width: 100%;
     text-align: center;
 }
+
 .nav-item a {
     color: #fff;
     text-decoration: none;
     font-size: 1.1rem;
     font-weight: 500;
     display: block;
-    transform: rotate(-90deg); /* Rotate text 90 degrees counterclockwise */
-    white-space: nowrap; /* Prevent text wrapping */
+    transform: rotate(-90deg);
+    white-space: nowrap;
 }
+
 .nav-item:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
+
 .nav-item.active {
     background-color: rgba(255, 255, 255, 0.2);
-    border-left: 4px solid #fff; /* Still visible on left */
+    border-left: 4px solid #528ACC; /* --luci-gradient2 for active highlight */
 }
+
 .content {
-    margin-left: 80px; /* Adjusted for slimmer sidebar */
+    margin-left: 80px;
     flex-grow: 1;
     padding: 20px;
 }
+
 .table-container {
     width: calc(100% - 40px);
     max-width: 1200px;
     margin: 1rem auto 4.5rem;
     overflow-y: auto;
     height: calc(100vh - 100px);
-    border: 1px solid rgba(11, 96, 49, 0.2);
-    box-shadow: 0 4px 20px rgba(11, 96, 49, 0.1);
+    border: 1px solid rgba(25, 50, 77, 0.2); /* #19324D with opacity */
+    box-shadow: 0 4px 20px rgba(25, 50, 77, 0.1);
     border-radius: 8px;
-    background-color: #fff;
+    background-color: #FFFFFF; /* --luci-bg */
 }
+
 .section {
     width: calc(100% - 40px);
     max-width: 1200px;
     margin: 1rem auto 4.5rem;
     padding: 20px;
-    background-color: #fff;
+    background-color: #FFFFFF; /* --luci-bg */
     border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(11, 96, 49, 0.1);
+    box-shadow: 0 4px 20px rgba(25, 50, 77, 0.1); /* #19324D with opacity */
 }
+
 table {
     width: 100%;
     border-collapse: collapse;
     font-family: 'Arial', sans-serif;
     font-size: 14px;
 }
+
 th, td {
-    border: 1px solid rgba(11, 96, 49, 0.15);
+    border: 1px solid #D8DEE3; /* --luci-muted */
     padding: 12px 16px;
     text-align: left;
     vertical-align: middle;
 }
+
 th {
-    background: linear-gradient(135deg, rgba(11, 96, 49, 0.9), rgba(11, 76, 39, 0.9));
+    background: linear-gradient(135deg, #19324D, #092036); /* --luci-primary to --luci-gradient1 */
     color: #fff;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -121,33 +209,40 @@ th {
     z-index: 2;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
 tr:hover {
-    background-color: rgba(11, 96, 49, 0.05);
+    background-color: rgba(82, 138, 204, 0.05); /* #528ACC with opacity */
     transition: background-color 0.2s ease;
 }
+
 td {
     transition: background-color 0.3s;
 }
+
 .groupHeadRow {
-    background-color: rgba(11, 96, 49, 0.8);
+    background-color: rgba(25, 50, 77, 0.8); /* #19324D with opacity */
     color: #fff;
     font-weight: 500;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
+
 .groupHeadRow:hover {
-    background-color: rgba(11, 76, 39, 1);
+    background-color: #092036; /* --luci-gradient1 */
 }
+
 .groupRow {
-    background-color: rgba(11, 96, 49, 0.3);
+    background-color: rgba(25, 50, 77, 0.3); /* #19324D with opacity */
     color: #333;
     font-weight: 400;
 }
+
 .groupRow:hover {
-    background-color: rgba(11, 96, 49, 0.4);
+    background-color: rgba(25, 50, 77, 0.4); /* Slightly darker #19324D */
 }
+
 .button {
-    background: linear-gradient(135deg, rgba(11, 96, 49, 0.9), rgba(11, 76, 39, 0.9));
+    background: linear-gradient(135deg, #19324D, #092036); /* --luci-primary to --luci-gradient1 */
     color: #fff;
     padding: 8px 12px;
     border: none;
@@ -160,24 +255,28 @@ td {
     transition: all 0.3s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
 .button:hover {
-    background: linear-gradient(135deg, rgba(11, 76, 39, 1), rgba(11, 56, 29, 1));
+    background: linear-gradient(135deg, #092036, #528ACC); /* --luci-gradient1 to --luci-gradient2 */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
+
 .button:disabled {
-    background: rgba(11, 96, 49, 0.4);
+    background: rgba(25, 50, 77, 0.4); /* #19324D with opacity */
     color: #ccc;
     opacity: 1;
     cursor: not-allowed;
     box-shadow: none;
 }
+
 tr:last-child {
-    background-color: rgba(11, 96, 49, 0.1);
+    background-color: rgba(82, 138, 204, 0.1); /* #528ACC with opacity */
     font-weight: 600;
-    border-top: 2px solid rgba(11, 96, 49, 0.5);
+    border-top: 2px solid rgba(25, 50, 77, 0.5); /* #19324D with opacity */
 }
+
 @media (max-width: 768px) {
-    .sidebar { width: 60px; } /* Slimmer on smaller screens */
+    .sidebar { width: 60px; }
     .content { margin-left: 60px; }
     .table-container, .section { width: calc(100% - 20px); margin: 0.5rem auto 3rem; }
     th, td { padding: 8px 10px; font-size: 12px; }
@@ -185,17 +284,18 @@ tr:last-child {
     .sidebar-header h2 { font-size: 1.2rem; }
     .nav-item a { font-size: 1rem; }
 }
+
 @media (max-width: 480px) {
     .sidebar {
         width: 100%;
         height: auto;
         position: relative;
         padding: 10px 0;
-        flex-direction: row; /* Horizontal layout on mobile */
+        flex-direction: row;
         justify-content: space-between;
     }
     .sidebar-header h2 {
-        transform: none; /* No rotation on mobile */
+        transform: none;
         font-size: 1.2rem;
     }
     .nav-list {
@@ -208,7 +308,7 @@ tr:last-child {
         padding: 10px;
     }
     .nav-item a {
-        transform: none; /* No rotation on mobile */
+        transform: none;
         font-size: 1rem;
     }
     .content {
@@ -220,51 +320,52 @@ tr:last-child {
 .chart-config {
     margin-bottom: 20px;
     display: flex;
-    gap: 30px; /* Slightly more spacing for breathing room */
+    gap: 30px;
     flex-wrap: wrap;
     align-items: center;
     padding: 10px 15px;
-    background: rgba(245, 247, 250, 0.8); /* Subtle off-white background */
+    background: rgba(247, 249, 251, 0.8); /* Slightly adjusted to match --page-bg */
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); /* Soft shadow for depth */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 /* Style for Selects */
 .chart-config select {
-    background: #fff; /* Clean white base */
-    color: #2A2E35; /* Charcoal gray for elegance */
-    padding: 10px 35px 10px 10px; /* Space for arrow */
+    background: #FFFFFF; /* --luci-bg */
+    color: #19324D; /* --luci-primary */
+    padding: 10px 35px 10px 10px;
     font-size: 14px;
-    font-weight: 400; /* Lighter weight for sophistication */
-    font-family: 'Arial', sans-serif; /* Clean, modern font */
+    font-weight: 400;
+    font-family: 'Arial', sans-serif;
     border: none;
-    border-bottom: 2px solid #0b6031; /* Thin green underline */
-    border-radius: 0; /* Sharp edges for modernity */
+    border-bottom: 2px solid #19324D; /* --luci-primary */
+    border-radius: 0;
     cursor: pointer;
     transition: border-color 0.3s ease, transform 0.2s ease;
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
     position: relative;
-    outline: none; /* Remove default focus outline */
+    outline: none;
 }
 
 /* Animated Underline on Hover/Focus */
 .chart-config select:hover,
 .chart-config select:focus {
-    border-color: #B49C46; /* Gold underline on interaction */
-    transform: translateY(-2px); /* Slight lift for dynamism */
+    border-color: #528ACC; /* --luci-gradient2 */
+    transform: translateY(-2px);
 }
 
 /* Elegant Animated Arrow */
 .chart-config select {
-    background-image: url('data:image/svg+xml;utf8,<svg fill="%230b6031" height="14" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%2319324D" height="14" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>'); /* #19324D */
     background-repeat: no-repeat;
     background-position: right 10px center;
 }
+
 .chart-config select:hover {
-    background-image: url('data:image/svg+xml;utf8,<svg fill="%23B49C46" height="14" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>'); /* Gold arrow on hover */
-    animation: pulseArrow 1.5s infinite; /* Subtle pulse */
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%23528ACC" height="14" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>'); /* #528ACC */
+    animation: pulseArrow 1.5s infinite;
 }
 
 /* Pulse Animation for Arrow */
@@ -273,11 +374,11 @@ tr:last-child {
     50% { transform: scale(1.2); }
 }
 
-/* Render Chart Button with Complementary Gold Color */
+/* Render Chart Button */
 #render-chart {
-    background: linear-gradient(135deg, #B49C46, #8F7C36); /* Gold gradient */
+    background: linear-gradient(135deg, #528ACC, #092036); /* --luci-gradient2 to --luci-gradient1 */
     color: #fff;
-    padding: 8px 12px; /* Matches .button */
+    padding: 8px 12px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -289,15 +390,14 @@ tr:last-child {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Hover Effect for Render Chart Button */
 #render-chart:hover {
-    background: linear-gradient(135deg, #8F7C36, #6B5C27); /* Darker gold gradient */
+    background: linear-gradient(135deg, #092036, #19324D); /* Reverse gradient */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* Ensure button inherits base styles if needed */
+/* Render Button */
 .render-button {
-    background: linear-gradient(135deg, rgba(11, 96, 49, 0.9), rgba(11, 76, 39, 0.9));
+    background: linear-gradient(135deg, #19324D, #092036); /* --luci-primary to --luci-gradient1 */
     color: #fff;
     padding: 8px 12px;
     border: none;
@@ -312,47 +412,40 @@ tr:last-child {
 }
 
 .render-button:hover {
-    background: linear-gradient(135deg, rgba(11, 76, 39, 1), rgba(11, 56, 29, 1));
+    background: linear-gradient(135deg, #092036, #528ACC); /* --luci-gradient1 to --luci-gradient2 */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
-    .chart-config {
-        gap: 15px; /* Slightly reduced spacing for medium screens */
-    }
-    .chart-config select, #render-chart {
-        padding: 6px 8px;
-        font-size: 12px;
-    }
+    .chart-config { gap: 15px; }
+    .chart-config select, #render-chart { padding: 6px 8px; font-size: 12px; }
 }
 
 @media (max-width: 480px) {
     .chart-config {
-        gap: 10px; /* Further reduced for small screens */
-        flex-direction: column; /* Stack vertically on mobile */
-        align-items: stretch; /* Full width for each item */
+        gap: 10px;
+        flex-direction: column;
+        align-items: stretch;
     }
-    .chart-config select, #render-chart {
-        width: 100%; /* Full width on mobile */
-    }
+    .chart-config select, #render-chart { width: 100%; }
 }
 
 .modal-header {
     display: flex;
     align-items: center;
     padding: 1.4rem 8px;
-    background-color: rgba(11, 96, 49, 0.8);
-    border-bottom: 1px solid #ddd;
+    background-color: rgba(25, 50, 77, 0.8); /* #19324D with opacity */
+    border-bottom: 1px solid #D8DEE3; /* --luci-muted */
     position: sticky;
     top: 0;
     z-index: 1;
 }
 
 .modal-content {
-    overflow-y: auto; 
-    flex-grow: 1; 
-    padding: 25px; 
+    overflow-y: auto;
+    flex-grow: 1;
+    padding: 25px;
 }
 
 .close-button {
@@ -364,7 +457,7 @@ tr:last-child {
     top: .75rem;
     right: .5rem;
     cursor: pointer;
-    color: #333;
+    color: #333; /* Kept neutral */
 }
 
 .custom-file-upload {
@@ -379,16 +472,16 @@ tr:last-child {
     align-items: center;
     position: relative;
     min-width: fit-content;
-    border: 2px solid #0b6031;
-    background-color: white;
-    color: #0b6031;
+    border: 2px solid #19324D; /* --luci-primary */
+    background-color: #FFFFFF; /* --luci-bg */
+    color: #19324D; /* --luci-primary */
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
     animation: border-pulse 2s infinite;
     width: 75%;
 }
 
 .custom-file-upload.completed {
-    border: 2px solid #ccc;
+    border: 2px solid #D8DEE3; /* --luci-muted */
     box-shadow: none;
     animation: none;
 }
@@ -397,17 +490,7 @@ tr:last-child {
     display: none;
 }
 
-/* 
-fiCharts.css
-Styles for the enhanced bar & pie charts.
-Adjust any sizing, colors, fonts, or transitions to suit your design.
-*/
-
-/* --- BAR CHART --- */
-/*
-  - Horizontal scrolling if needed (overflow-x: auto).
-  - No vertical scrollbar (overflow-y: hidden) so the chart is stable in height.
-*/
+/* Bar Chart */
 .bar-chart-wrap {
     position: relative;
     width: 90%;
@@ -415,197 +498,164 @@ Adjust any sizing, colors, fonts, or transitions to suit your design.
     font-family: sans-serif;
     overflow-x: auto;
     overflow-y: hidden;
-  }
+}
 
-  /* 
-   Inner container that we set to the total needed width in JS.
-   This ensures the axis lines + bars share the same coordinate system
-   and scroll together.
-*/
 .bar-chart-inner-wrap {
     position: relative;
-    width: 100%;  /* Will be overridden in JS to something bigger if needed */
-    height: 100%; 
+    width: 100%;
+    height: 100%;
 }
-  
-  /*
-    The container for axis lines & labels, 
-    stopping 50px above the bottom to leave space for bar labels.
-  */
-  .bar-chart-axis-container {
+
+.bar-chart-axis-container {
     position: absolute;
     left: 0;
     right: 0;
     top: 0;
-    /* Increased from 30px to 50px to ensure labels are not clipped */
     bottom: 50px;
-    pointer-events: none; 
-  }
-  
-  .bar-chart-axis-line {
+    pointer-events: none;
+}
+
+.bar-chart-axis-line {
     position: absolute;
     width: 100%;
-    border-top: 1px solid #ccc;
+    border-top: 1px solid #D8DEE3; /* --luci-muted */
     box-sizing: border-box;
-  }
-  
-  .bar-chart-axis-label {
+}
+
+.bar-chart-axis-label {
     position: absolute;
     left: 0;
     top: -10px;
     font-size: 0.75rem;
-    background: #fff;
+    background: #FFFFFF; /* --luci-bg */
     padding: 0 4px;
-  }
-  
-  /*
-    The container for bars, also ending 50px from the bottom.
-    We'll set its width via JS if the chart is wide.
-  */
-  .bar-chart-container {
+}
+
+.bar-chart-container {
     position: absolute;
-    left: 50px;   /* space for axis labels */
-    right: 20px;  /* some padding on the right */
+    left: 50px;
+    right: 20px;
     top: 0;
     bottom: 50px;
-  }
-  
-  /* Bars are placed absolutely inside .bar-chart-container. */
-  .bar {
+}
+
+.bar {
     position: absolute;
-    bottom: 0; 
+    bottom: 0;
     transition: height 0.4s ease;
     cursor: pointer;
-  }
-  
-  /* Rounded corners: top corners for positive, bottom corners for negative. */
-  .positive-bar {
+}
+
+.positive-bar {
     border-radius: 4px 4px 0 0;
-  }
-  
-  .negative-bar {
+}
+
+.negative-bar {
     border-radius: 0 0 4px 4px;
-  }
-  
-  /*
-    The label is placed 20px below the bar's bottom. 
-    Now that the container bottom is 50px from the chart bottom, 
-    there's sufficient space for these labels.
-  */
-  .bar-label {
+}
+
+.bar-label {
     position: absolute;
     bottom: -20px;
     left: 50%;
     transform: translateX(-50%);
     font-size: 0.75rem;
     white-space: nowrap;
-  }
-  
-  /* Tooltip on hover */
-  .bar-tooltip {
+}
+
+.bar-tooltip {
     position: absolute;
     padding: 4px 8px;
-    background: rgba(0, 0, 0, 0.75);
+    background: rgba(25, 50, 77, 0.75); /* #19324D with opacity */
     color: #fff;
     border-radius: 4px;
     font-size: 0.75rem;
     pointer-events: none;
     white-space: nowrap;
     z-index: 100;
-  }
+}
 
-   
-  /* --- PIE CHART --- */
-  .pie-chart {
+/* Pie Chart */
+.pie-chart {
     position: relative;
     width: 600px;
     height: 600px;
     margin: 0 auto;
     border-radius: 50%;
-    overflow: hidden; /* ensures conic-gradient fits the circle */
-  }
-  
-  /* Pie labels that appear around the pie */
-  .pie-label {
+    overflow: hidden;
+}
+
+.pie-label {
     position: absolute;
     transform: translate(-50%, -50%);
     font-size: 0.75rem;
-    background: #fff;
+    background: #FFFFFF; /* --luci-bg */
     padding: 2px 4px;
     border-radius: 3px;
     white-space: nowrap;
     pointer-events: none;
-  }
-  
-  /* Legend for the pie chart */
-  .pie-legend {
+}
+
+.pie-legend {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
     margin-top: 1rem;
     justify-content: center;
     font-family: sans-serif;
-  }
-  
-  .pie-legend-item {
+}
+
+.pie-legend-item {
     display: flex;
     align-items: center;
     gap: 6px;
-  }
-  
-  .pie-legend-color-box {
+}
+
+.pie-legend-color-box {
     width: 14px;
     height: 14px;
     border-radius: 3px;
     display: inline-block;
-  }
+}
 
 /* Statistics Section */
 #statistics-section {
     padding: 0;
-    max-height: 80vh; /* Limit height to 80% of viewport */
-    overflow-y: auto; 
+    max-height: 80vh;
+    overflow-y: auto;
     overflow-x: hidden;
 }
 
-/* Statistics Section */
-#statistics-section {
-    padding: 0;
-}
-
-/* Stats Container */
 .stats-container {
     padding: 15px;
-    background: rgba(245, 247, 250, 0.8);
+    background: rgba(247, 249, 251, 0.8); /* Adjusted to match --page-bg */
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-/* Stats Category */
 .stats-category {
     margin-bottom: 20px;
 }
 
-/* Stats Header */
 .stats-header {
     margin: 0;
     padding: 10px 15px;
     font-size: 18px;
     font-weight: 500;
-    color: #2A2E35;
-    background: #fff;
-    border-bottom: 2px solid #0b6031;
+    color: #19324D; /* --luci-primary */
+    background: #FFFFFF; /* --luci-bg */
+    border-bottom: 2px solid #19324D; /* --luci-primary */
     border-radius: 0;
     cursor: pointer;
     transition: border-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
 }
+
 .stats-header:hover {
-    border-color: #B49C46;
+    border-color: #528ACC; /* --luci-gradient2 */
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(180, 156, 70, 0.2);
+    box-shadow: 0 4px 12px rgba(82, 138, 204, 0.2); /* #528ACC with opacity */
 }
 
-/* Stats Content */
 .stats-content {
     padding: 10px 0;
     display: flex;
@@ -613,32 +663,35 @@ Adjust any sizing, colors, fonts, or transitions to suit your design.
     gap: 20px;
 }
 
-/* Stats Card */
 .stats-card {
-    background: #fff;
+    background: #FFFFFF; /* --luci-bg */
     padding: 15px;
     border-radius: 6px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
     flex: 1 1 300px;
     transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
+
 .stats-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 6px 16px rgba(180, 156, 70, 0.2);
+    box-shadow: 0 6px 16px rgba(82, 138, 204, 0.2); /* #528ACC with opacity */
 }
+
 .stats-card h3 {
     margin: 0 0 10px;
     font-size: 16px;
     font-weight: 500;
-    color: #0b6031;
+    color: #19324D; /* --luci-primary */
 }
+
 .stats-card p {
     margin: 5px 0;
     font-size: 14px;
-    color: #2A2E35;
+    color: #333; /* Kept neutral */
 }
+
 .stats-card strong {
-    color: #B49C46;
+    color: #528ACC; /* --luci-gradient2 instead of gold */
 }
 
 /* Responsive Adjustments */
@@ -650,9 +703,9 @@ Adjust any sizing, colors, fonts, or transitions to suit your design.
     .stats-card h3 { font-size: 15px; }
     .stats-card p { font-size: 13px; }
 }
+
 @media (max-width: 480px) {
     .stats-container { padding: 8px; }
     .stats-content { flex-direction: column; gap: 10px; }
     .stats-card { flex: 1 1 100%; }
 }
-  
