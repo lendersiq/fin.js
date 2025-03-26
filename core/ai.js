@@ -1,7 +1,8 @@
 // core/ai.js
 window.synonyms = [
   ["amount", "principal"],
-  ["withdrawal", "check", "debit"]
+  ["withdrawal", "check", "debit"],
+  ["deposit", "credit"]
 ];
 
 function aiIsBusiness(...args) {  
