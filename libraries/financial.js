@@ -308,12 +308,59 @@ window.financial = {
 
     checkingProfit: {
       description: "Calculates the profit of checking accounts",
-      implementation: function(portfolio, balance, interest=null, rate=null, charges=null, waived=null, open, deposits=null, withdrawals=null, sourceIndex) {
+      implementation: function(portfolio, balance, interest=null, rate=null, charges=null, waived=null, deposits=null, withdrawals=null, nsf=null, sourceIndex) {
         if (!balance || balance === 0) return 0;
         //const sourceIndex = 'checking';
         const creditRate = financial.functions.calculateFtpRate.implementation(12, sourceIndex);
         const creditForFunding = creditRate * balance * (1 - financial.attributes.ddaReserveRequired.value);
-        const { monthsSinceOpen, yearsSinceOpen } = financial.functions.sinceOpen.implementation(open);
+        //const { monthsSinceOpen, yearsSinceOpen } = financial.functions.sinceOpen.implementation(open); can be used to address aquisition costs
+        // i.e annualAquisitionExpense = aquistionExpense / yearsSinceOpen
+
+        const annualDeposits = deposits ? deposits * getStatistic(sourceIndex, 'deposits', 'YTDfactor') : 0;
+        const depositsExpense = annualDeposits * financial.attributes.depositUnitExpense.value;
+        const annualWithdrawals = withdrawals ? withdrawals * getStatistic(sourceIndex, 'withdrawals', 'YTDfactor') : 0;
+        const withdrawalsExpense =  annualWithdrawals * financial.attributes.withdrawalUnitExpense.value;
+
+        //aiIdConsumerSmallBiz  
+        const consumerMaximum = financial.dictionaries.consumerMaximum.values[sourceIndex];
+        const params = {balance, interest, sourceIndex, annualDeposits, annualWithdrawals, consumerMaximum};
+        const isBusiness = aiIsBusiness([params]);  // @ai.js
+        let accountType = "Consumer";
+        if (isBusiness) {
+          accountType = "Business";
+        }
+
+        const interestByExpense = interest ? interest * getStatistic(sourceIndex, 'interest', 'YTDfactor') : 0;
+        const interestByRate = rate ? rate * getStatistic(sourceIndex, 'rate', 'YTDfactor') * balance : 0;
+        const interestExpense = Math.max(interestByExpense, interestByRate);
+        
+        const chargesIncome = charges ? charges : 0;
+        const waiveIncome = waived ? waived : 0;
+        const feeIncome = (chargesIncome - waiveIncome) * getStatistic(sourceIndex, 'charges', 'YTDfactor');
+        const nsfIncome = nsf ? nsf * getStatistic(sourceIndex, 'nsf', 'YTDfactor') : 0;
+        
+        var operatingExpense = 100;  //default
+        if (financial.dictionaries.annualOperatingExpense[sourceIndex].values[accountType]) {
+          operatingExpense = financial.dictionaries.annualOperatingExpense[sourceIndex].values[accountType];
+        }
+        const fraudLoss = financial.attributes.capitalTarget.value * financial.attributes.fraudLossFactor.value * balance;
+               
+        const pretaxIncome = creditForFunding + feeIncome + nsfIncome;
+        const pretaxExpense = interestExpense + depositsExpense + withdrawalsExpense + operatingExpense + fraudLoss; 
+        const pretaxProfit = pretaxIncome - pretaxExpense;
+        const profit = pretaxProfit * (1 - financial.attributes.taxRate.value);
+        if (window.logger) console.log(`portfolio: ${portfolio}, balance: ${balance}, interest: ${interestExpense}, rate: ${rate}, credit rate: ${creditRate}, credit for funding: ${creditForFunding}, charges: ${charges}, waived: ${waived}, deposits: ${deposits}, withdrawals: ${withdrawals}, nsf: ${nsf}, operating expense: ${operatingExpense}, fraud loss: ${fraudLoss}, pretax income: ${pretaxIncome}, pretax expense: ${pretaxExpense}, profit: ${profit.toFixed(2)}`);
+        return profit;
+      }
+    },
+
+    savingsProfit: {
+      description: "Calculates the profit of savings accounts",
+      implementation: function(portfolio, balance, interest=null, rate=null, term=null, term_code=null, charges=null, waived=null, deposits=null, withdrawals=null, sourceIndex) {
+        if (!balance || balance === 0) return 0;
+        const months = term ? term * (term_code ? (term_code.toLowerCase() !== 'm' ? term / 12 : 1) : 1) : 12;  //default term to 12
+        const creditRate = financial.functions.calculateFtpRate.implementation(months, sourceIndex);
+        const creditForFunding = creditRate * balance;
 
         const annualDeposits = deposits ? deposits * getStatistic(sourceIndex, 'deposits', 'YTDfactor') : 0;
         const depositsExpense = annualDeposits * financial.attributes.depositUnitExpense.value;
@@ -347,6 +394,7 @@ window.financial = {
         const pretaxExpense = interestExpense + depositsExpense + withdrawalsExpense + operatingExpense + fraudLoss; 
         const pretaxProfit = pretaxIncome - pretaxExpense;
         const profit = pretaxProfit * (1 - financial.attributes.taxRate.value);
+        if (window.logger) console.log(`portfolio: ${portfolio}, balance: ${balance}, interest: ${interestExpense}, rate: ${rate}, credit rate: ${creditRate}, credit for funding: ${creditForFunding}, charges: ${charges}, waived: ${waived}, deposits: ${deposits}, withdrawals: ${withdrawals}, operating expense: ${operatingExpense}, fraud loss: ${fraudLoss}, pretax income: ${pretaxIncome}, pretax expense: ${pretaxExpense}, profit: ${profit.toFixed(2)}`);
         return profit;
       }
     },
