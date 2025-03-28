@@ -331,7 +331,7 @@ window.financial = {
         }
 
         const interestByExpense = interest ? interest * getStatistic(sourceIndex, 'interest', 'YTDfactor') : 0;
-        const interestByRate = rate ? rate * getStatistic(sourceIndex, 'rate', 'YTDfactor') * balance : 0;
+        const interestByRate = rate ? ( rate < 1 ? parseFloat(rate) : parseFloat(rate / 100) ) * getStatistic(sourceIndex, 'rate', 'YTDfactor') * balance : 0;
         const interestExpense = Math.max(interestByExpense, interestByRate);
         
         const chargesIncome = charges ? charges : 0;
@@ -377,14 +377,14 @@ window.financial = {
         }
 
         const interestByExpense = interest ? interest * getStatistic(sourceIndex, 'interest', 'YTDfactor') : 0;
-        const interestByRate = rate ? rate * getStatistic(sourceIndex, 'rate', 'YTDfactor') * balance : 0;
+        const interestByRate = rate ? ( rate < 1 ? parseFloat(rate) : parseFloat(rate / 100) ) * getStatistic(sourceIndex, 'rate', 'YTDfactor') * balance : 0;
         const interestExpense = Math.max(interestByExpense, interestByRate);
         
         const chargesIncome = charges ? charges : 0;
         const waiveIncome = waived ? waived : 0;
         const feeIncome = (chargesIncome - waiveIncome) * getStatistic(sourceIndex, 'charges', 'YTDfactor');
         
-        var operatingExpense = 100;  //default
+        var operatingExpense = 50;  //default
         if (financial.dictionaries.annualOperatingExpense[sourceIndex].values[accountType]) {
           operatingExpense = financial.dictionaries.annualOperatingExpense[sourceIndex].values[accountType];
         }
@@ -398,6 +398,36 @@ window.financial = {
         return profit;
       }
     },
+
+    CDProfit: {
+      description: "Calculates the profit of certificate of deposits",
+      implementation: function(portfolio, balance, interest=null, rate=null, term=null, term_id=null, deposits=null, sourceIndex) {
+        if (!balance || balance === 0) return 0;
+        console.log('term_id', term_id)
+        const months = term ? term * (term_id ? (term_id.toLowerCase() !== 'm' ? term / 12 : 1) : 1) : 12;  //default term to 12
+        const creditRate = financial.functions.calculateFtpRate.implementation(months, sourceIndex);
+        const creditForFunding = creditRate * balance;
+
+        const annualDeposits = deposits ? deposits * getStatistic(sourceIndex, 'deposits', 'YTDfactor') : 0;
+        const depositsExpense = annualDeposits * financial.attributes.depositUnitExpense.value;
+       
+        const interestByExpense = interest ? interest * getStatistic(sourceIndex, 'interest', 'YTDfactor') : 0;
+        const interestByRate = rate ? ( rate < 1 ? parseFloat(rate) : parseFloat(rate / 100) ) * getStatistic(sourceIndex, 'rate', 'YTDfactor') * balance : 0;
+        const interestExpense = Math.max(interestByExpense, interestByRate);
+        
+        var operatingExpense = 100;  //default
+        if (financial.dictionaries.annualOperatingExpense[sourceIndex].value) {
+          operatingExpense = financial.dictionaries.annualOperatingExpense[sourceIndex].value;
+        }
+               
+        const pretaxExpense = interestExpense + depositsExpense + operatingExpense; 
+        const pretaxProfit = creditForFunding - pretaxExpense;
+        const profit = pretaxProfit * (1 - financial.attributes.taxRate.value);
+        if (window.logger) console.log(`portfolio: ${portfolio}, balance: ${balance}, interest: ${interestExpense}, rate: ${rate}, credit rate: ${creditRate}, credit for funding: ${creditForFunding}, deposits: ${deposits}, operating expense: ${operatingExpense}, pretax expense: ${pretaxExpense}, profit: ${profit.toFixed(2)}`);
+        return profit;
+      }
+    },
+
 
     loanProfit: {
       description: "Calculates the profit of a variety of loans",
