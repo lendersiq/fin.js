@@ -54,7 +54,6 @@ window.fiCharts = (function () {
    * no vertical overflow, and horizontal spacing for multiple bars.
    */
   function renderBarChart(data, container) {
-    // Clear the container
     container.innerHTML = '';
   
     // Basic stats

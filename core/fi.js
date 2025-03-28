@@ -647,18 +647,18 @@ console.log(asciiLucijs);
     // 1) Ensure we have a paramMap object for this source
     if (!window.paramMap[sourceName]) {
       window.paramMap[sourceName] = {};
+      console.log ('parameter names to match:', paramNames);
+      // 2) to save compute we examine each paramName, see if we have a cached matched key
+      //    If not, we call findBestKey once and store it.
+      paramNames.forEach(paramName => {
+        if (!window.paramMap[sourceName][paramName]) {
+          const matchedKey = findBestKey(paramName, Object.keys(row));
+          // Store the result (or null if none)
+          window.paramMap[sourceName][paramName] = matchedKey || null;
+        }
+      });
     }
-    
-    // 2) to save compute we examine each paramName, see if we have a cached matched key
-    //    If not, we call findBestKey once and store it.
-    paramNames.forEach(paramName => {
-      if (!window.paramMap[sourceName][paramName]) {
-        const matchedKey = findBestKey(paramName, Object.keys(row));
-        // Store the result (or null if none)
-        window.paramMap[sourceName][paramName] = matchedKey || null;
-      }
-    });
-  
+
     // 3) Now build the return array by using the cached mapping
     return paramNames.map(paramName => {
       const matchedKey = window.paramMap[sourceName][paramName];
@@ -730,7 +730,6 @@ console.log(asciiLucijs);
         // If there's no default value, use empty string
         paramDefaults.push(defaultValue !== undefined ? defaultValue : '');
     });
-    
     return { paramNames, paramDefaults };
   }
 
@@ -753,12 +752,12 @@ console.log(asciiLucijs);
       let paramNames = [];
       if (typeof window.financial.functions[functionName].implementation === 'function') {
         ({ paramNames, paramDefaults } = getFunctionParameters(window.financial.functions[functionName].implementation));
-        //console.log(`Function "${functionName}" parameter names:`, paramNames);
+        console.log(`Function "${functionName}" parameter names:`, paramNames);
       }
 
       window.rawData[sourceName].forEach((row, rowIndex) => {
         const paramValues = buildParamValues(paramNames, row, sourceName);
-        // REPLACE "sourceIndex" WITH "sourcIndex"
+        //console.log('paramValues', paramValues);
         const updatedParamValues = paramValues.map((val, i) => {
         // If the paramNames[i] is exactly "sourceIndex", use the string "sourcIndex" instead of the value
           if (paramNames[i] === 'sourceIndex') {
@@ -1101,30 +1100,30 @@ console.log(asciiLucijs);
 
     // Render Chart
     renderButton.addEventListener('click', () => {
-        const type = chartTypeSelect.value;
-        const xCol = xAxisSelect.value;
-        const yCol = yAxisSelect.value;
+      const type = chartTypeSelect.value;
+      const xCol = xAxisSelect.value;
+      const yCol = yAxisSelect.value;
 
-        // Flatten subRows into a single array
-        const subRowsData = Object.values(window.combinedData).flatMap(group => group.subRows);
+      // Flatten subRows into a single array
+      const subRowsData = Object.values(window.combinedData).flatMap(group => group.subRows);
 
-        // Aggregate data (sum Y by unique X values)
-        const dataMap = {};
-        subRowsData.forEach(row => {
-            const xValue = row[xCol];
-            const yValue = parseFloat(row[yCol]);
-            if (!dataMap[xValue]) dataMap[xValue] = 0;
-            dataMap[xValue] += yValue;
-        });
+      // Aggregate data (sum Y by unique X values)
+      const dataMap = {};
+      subRowsData.forEach(row => {
+        const xValue = row[xCol];
+        const yValue = row[yCol] ? parseFloat(row[yCol]) : 0;
+        if (!dataMap[xValue]) dataMap[xValue] = 0;
+        dataMap[xValue] += yValue;
+      });
 
-        const data = Object.entries(dataMap).map(([x, y]) => ({ x, y }));
-        chartContainer.innerHTML = ''; // Clear previous chart
+      const data = Object.entries(dataMap).map(([x, y]) => ({ x, y }));
+      chartContainer.innerHTML = ''; // Clear previous chart
 
-        if (type === 'bar') {
-            window.fiCharts.renderBarChart(data, chartContainer);
-        } else if (type === 'pie') {
-            window.fiCharts.renderPieChart(data, chartContainer);
-        }
+      if (type === 'bar') {
+        window.fiCharts.renderBarChart(data, chartContainer);
+      } else if (type === 'pie') {
+        window.fiCharts.renderPieChart(data, chartContainer);
+      }
     });
   }
 
